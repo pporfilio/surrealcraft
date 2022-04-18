@@ -2,6 +2,7 @@
 
 #include <QOpenGLFunctions>
 #include <QOpenGLExtraFunctions>
+#include <QDebug>
 
 GLWindow::GLWindow()
 {
@@ -13,14 +14,14 @@ GLWindow::GLWindow()
     m_uniformVectors.insert(m_EYE_NAME, QVector3D());
     m_uniformVectors.insert(m_TARGET_NAME, QVector3D());
 
-    m_triangle_data.append(-1.0);
-    m_triangle_data.append(1.0);
+    m_triangle_data.append(-0.5);
+    m_triangle_data.append(-0.5);
     m_triangle_data.append(0.0);
-    m_triangle_data.append(1.0);
-    m_triangle_data.append(1.0);
+    m_triangle_data.append(0.5);
+    m_triangle_data.append(-0.5);
     m_triangle_data.append(0.0);
-    m_triangle_data.append(-1.0);
     m_triangle_data.append(0.0);
+    m_triangle_data.append(0.5);
     m_triangle_data.append(0.0);
 }
 
@@ -31,18 +32,8 @@ GLWindow::~GLWindow() {
 static const char *vertexShaderSource =
     "#version 330\n"
     "layout(location = 0) in vec4 vertex;\n"
-    "out vec3 vert;\n"
-    "out vec3 color;\n"
-    "uniform mat4 projMatrix;\n"
-    "uniform mat4 camMatrix;\n"
-    "uniform mat4 worldMatrix;\n"
-    "uniform mat4 myMatrix;\n"
-    "uniform sampler2D sampler;\n"
     "void main() {\n"
-    "   mat4 wm = myMatrix * worldMatrix;\n"
-    "   color = vec3(1.0, 0.0, 0.0);\n"
-    "   vert = vec3(wm * vertex);\n"
-    "   gl_Position = projMatrix * camMatrix * wm * vertex;\n"
+    "   gl_Position = vec4(vertex.x, vertex.y, vertex.z, 1.0);\n"
     "}\n";
 
 static const char *fragmentShaderSource =
@@ -52,7 +43,7 @@ static const char *fragmentShaderSource =
     "out highp vec4 fragColor;\n"
     "uniform highp vec3 lightPos;\n"
     "void main() {\n"
-    "   fragColor = vec4(col, 1.0);\n"
+    "   fragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
     "}\n";
 
 void GLWindow::initializeGL() {
@@ -62,17 +53,18 @@ void GLWindow::initializeGL() {
     m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource);
     m_program->addShaderFromSourceCode(QOpenGLShader::Fragment, fragmentShaderSource);
     m_program->link();
+    qInfo() << (m_program->log());
 
 
-    m_uniformLocations.insert(m_PROJECTION_MATRIX_NAME, m_program->uniformLocation(m_PROJECTION_MATRIX_NAME));
-    m_uniformLocations.insert(m_CAMERA_MATRIX_NAME, m_program->uniformLocation(m_CAMERA_MATRIX_NAME));
-    m_uniformLocations.insert(m_WORLD_MATRIX_NAME, m_program->uniformLocation(m_WORLD_MATRIX_NAME));
-    m_uniformLocations.insert(m_MY_MATRIX_NAME, m_program->uniformLocation(m_MY_MATRIX_NAME));
-    m_uniformLocations.insert(m_LIGHT_POSITION_NAME, m_program->uniformLocation(m_LIGHT_POSITION_NAME));
+//    m_uniformLocations.insert(m_PROJECTION_MATRIX_NAME, m_program->uniformLocation(m_PROJECTION_MATRIX_NAME));
+//    m_uniformLocations.insert(m_CAMERA_MATRIX_NAME, m_program->uniformLocation(m_CAMERA_MATRIX_NAME));
+//    m_uniformLocations.insert(m_WORLD_MATRIX_NAME, m_program->uniformLocation(m_WORLD_MATRIX_NAME));
+//    m_uniformLocations.insert(m_MY_MATRIX_NAME, m_program->uniformLocation(m_MY_MATRIX_NAME));
+//    m_uniformLocations.insert(m_LIGHT_POSITION_NAME, m_program->uniformLocation(m_LIGHT_POSITION_NAME));
 
     m_vertexArrayObject.reset(new QOpenGLVertexArrayObject);
     if (m_vertexArrayObject->create()) {
-        m_vertexArrayObject->create();
+        m_vertexArrayObject->bind();
     }
 
     m_program->bind();
@@ -87,7 +79,7 @@ void GLWindow::initializeGL() {
     f->glEnableVertexAttribArray(0);
 
     // This says that layout(location = 0) starts at 0 (nullptr) offset into the VBO
-    f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), nullptr);
+    f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
 
     m_vertexBuffer->release();
 
@@ -95,10 +87,10 @@ void GLWindow::initializeGL() {
 }
 
 void GLWindow::resizeGL(int w, int h) {
-    m_uniformMatrices.insert(m_PROJECTION_MATRIX_NAME, QMatrix4x4());
-    QMatrix4x4 tmp;
-    tmp.perspective(45.0f, GLfloat(w) / h, 0.01f, 100.0f);
-    m_uniformMatrices.insert(m_PROJECTION_MATRIX_NAME, tmp);
+//    m_uniformMatrices.insert(m_PROJECTION_MATRIX_NAME, QMatrix4x4());
+//    QMatrix4x4 tmp;
+//    tmp.perspective(45.0f, GLfloat(w) / h, 0.01f, 100.0f);
+//    m_uniformMatrices.insert(m_PROJECTION_MATRIX_NAME, tmp);
 }
 
 void GLWindow::paintGL() {
@@ -107,13 +99,13 @@ void GLWindow::paintGL() {
     f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_program->bind();
-    QMatrix4x4 tmp;
-    tmp.lookAt(QVector3D(0, 0, -1), QVector3D(0, 0, 0), QVector3D(0, 1, 0));
-    m_uniformMatrices.insert(m_CAMERA_MATRIX_NAME, tmp);
-    m_program->setUniformValue(m_uniformLocations.value(m_PROJECTION_MATRIX_NAME), m_uniformMatrices.value(m_PROJECTION_MATRIX_NAME));
-    m_program->setUniformValue(m_uniformLocations.value(m_CAMERA_MATRIX_NAME), m_uniformMatrices.value(m_CAMERA_MATRIX_NAME));
-    m_program->setUniformValue(m_uniformLocations.value(m_WORLD_MATRIX_NAME), m_uniformMatrices.value(m_WORLD_MATRIX_NAME));
-    m_program->setUniformValue(m_uniformLocations.value(m_MY_MATRIX_NAME), m_uniformMatrices.value(m_MY_MATRIX_NAME));
+//    QMatrix4x4 tmp;
+//    tmp.lookAt(QVector3D(0, 0, -1), QVector3D(0, 0, 0), QVector3D(0, 1, 0));
+//    m_uniformMatrices.insert(m_CAMERA_MATRIX_NAME, tmp);
+//    m_program->setUniformValue(m_uniformLocations.value(m_PROJECTION_MATRIX_NAME), m_uniformMatrices.value(m_PROJECTION_MATRIX_NAME));
+//    m_program->setUniformValue(m_uniformLocations.value(m_CAMERA_MATRIX_NAME), m_uniformMatrices.value(m_CAMERA_MATRIX_NAME));
+//    m_program->setUniformValue(m_uniformLocations.value(m_WORLD_MATRIX_NAME), m_uniformMatrices.value(m_WORLD_MATRIX_NAME));
+//    m_program->setUniformValue(m_uniformLocations.value(m_MY_MATRIX_NAME), m_uniformMatrices.value(m_MY_MATRIX_NAME));
 
     f->glDrawArrays(GL_TRIANGLES, 0, m_triangle_data.size() / 3);
 }
