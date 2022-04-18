@@ -3,6 +3,9 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLExtraFunctions>
 #include <QDebug>
+#include <QFile>
+#include <QDir>
+#include <QCoreApplication>
 
 GLWindow::GLWindow()
 {
@@ -29,25 +32,22 @@ GLWindow::~GLWindow() {
     makeCurrent();
 }
 
-static const char *vertexShaderSource =
-    "#version 330\n"
-    "layout(location = 0) in vec4 vertex;\n"
-    "void main() {\n"
-    "   gl_Position = vec4(vertex.x, vertex.y, vertex.z, 1.0);\n"
-    "}\n";
-
-static const char *fragmentShaderSource =
-    "#version 330\n"
-    "in highp vec3 vert;\n"
-    "in highp vec3 color;\n"
-    "out highp vec4 fragColor;\n"
-    "uniform highp vec3 lightPos;\n"
-    "void main() {\n"
-    "   fragColor = vec4(1.0, 0.0, 0.0, 1.0);\n"
-    "}\n";
-
 void GLWindow::initializeGL() {
     QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
+
+    // TODO: handle errors
+    qDebug() << QCoreApplication::applicationDirPath();
+    QDir applicationRoot(QCoreApplication::applicationDirPath());
+    QFile vertexShaderFile(applicationRoot.absoluteFilePath("shaders/scene.vert"));
+    vertexShaderFile.open(QIODevice::ReadOnly | QIODevice::Text);
+    QFile fragmentShaderFile(applicationRoot.absoluteFilePath("shaders/scene.frag"));
+    fragmentShaderFile.open(QIODevice::ReadOnly | QIODevice::Text);
+
+    QTextStream vertexShaderIn(&vertexShaderFile);
+    QString vertexShaderSource = vertexShaderIn.readAll();
+
+    QTextStream fragmentShaderIn(&fragmentShaderFile);
+    QString fragmentShaderSource = fragmentShaderIn.readAll();
 
     m_program.reset(new QOpenGLShaderProgram);
     m_program->addShaderFromSourceCode(QOpenGLShader::Vertex, vertexShaderSource);
@@ -82,8 +82,6 @@ void GLWindow::initializeGL() {
     f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
 
     m_vertexBuffer->release();
-
-
 }
 
 void GLWindow::resizeGL(int w, int h) {
