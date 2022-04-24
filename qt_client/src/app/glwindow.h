@@ -27,18 +27,30 @@ public:
     GLWindow();
     ~GLWindow();
 
+    void addVertex(QVector3D v);
+
     void initializeGL();
     void resizeGL(int w, int h);
     void paintGL();
 
 private:
-    const QString m_PROJECTION_MATRIX_NAME = QString("projectionMatrix");
-    const QString m_CAMERA_MATRIX_NAME = QString("cameraMatrix");
-    const QString m_WORLD_MATRIX_NAME = QString("worldMatrix");
-    const QString m_MY_MATRIX_NAME = QString("myMatrix");
+    const QString m_PROJECTION_MATRIX_NAME = QString("projection");
+    const QString m_VIEW_MATRIX_NAME = QString("view");
+    const QString m_MODEL_MATRIX_NAME = QString("model");
     const QString m_LIGHT_POSITION_NAME = QString("lightPosition");
     const QString m_EYE_NAME = QString("eye");
-    const QString m_TARGET_NAME = QString("target");
+
+    int m_projectionMatrixLocation;
+    int m_viewMatrixLocation;
+    int m_modelMatrixLocation;
+    int m_lightPositionLocation;
+    int m_eyeLocation;
+
+    QMatrix4x4 m_projectionMatrix = QMatrix4x4();
+    QMatrix4x4 m_viewMatrix = QMatrix4x4();
+    QMatrix4x4 m_modelMatrix = QMatrix4x4();
+    QVector3D m_lightPosition;
+    QVector3D m_eyeVector;
 
     std::unique_ptr<QOpenGLTexture> m_texture;
     std::unique_ptr<QOpenGLShaderProgram> m_program;
@@ -49,7 +61,7 @@ private:
     QMap<QString, QMatrix4x4> m_uniformMatrices;
     QMap<QString, QVector3D> m_uniformVectors;
 
-    QList<GLfloat> m_triangle_data;
+    QList<GLfloat> m_triangleData;
 
 };
 

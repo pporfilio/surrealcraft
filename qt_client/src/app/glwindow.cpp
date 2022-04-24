@@ -6,26 +6,60 @@
 #include <QFile>
 #include <QDir>
 #include <QCoreApplication>
+#include <QTime>
+
+void GLWindow::addVertex(QVector3D v) {
+
+    m_triangleData.append(v.x());
+    m_triangleData.append(v.y());
+    m_triangleData.append(v.z());
+
+}
 
 GLWindow::GLWindow()
 {
-    m_uniformMatrices.insert(m_WORLD_MATRIX_NAME, QMatrix4x4());
-    m_uniformMatrices.insert(m_CAMERA_MATRIX_NAME, QMatrix4x4());
-    m_uniformMatrices.insert(m_WORLD_MATRIX_NAME, QMatrix4x4());
-    m_uniformMatrices.insert(m_MY_MATRIX_NAME, QMatrix4x4());
-    m_uniformVectors.insert(m_LIGHT_POSITION_NAME, QVector3D());
-    m_uniformVectors.insert(m_EYE_NAME, QVector3D());
-    m_uniformVectors.insert(m_TARGET_NAME, QVector3D());
 
-    m_triangle_data.append(-0.5);
-    m_triangle_data.append(-0.5);
-    m_triangle_data.append(0.0);
-    m_triangle_data.append(0.5);
-    m_triangle_data.append(-0.5);
-    m_triangle_data.append(0.0);
-    m_triangle_data.append(0.0);
-    m_triangle_data.append(0.5);
-    m_triangle_data.append(0.0);
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f));
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f));
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f));
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f));
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
+
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f));
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f));
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f));
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f));
+
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f));
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f));
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f));
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f));
+
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f));
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f));
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f));
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f));
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
+
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f));
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f));
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f));
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f));
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
+
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f));
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f));
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f));
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f));
 }
 
 GLWindow::~GLWindow() {
@@ -56,11 +90,9 @@ void GLWindow::initializeGL() {
     qInfo() << (m_program->log());
 
 
-//    m_uniformLocations.insert(m_PROJECTION_MATRIX_NAME, m_program->uniformLocation(m_PROJECTION_MATRIX_NAME));
-//    m_uniformLocations.insert(m_CAMERA_MATRIX_NAME, m_program->uniformLocation(m_CAMERA_MATRIX_NAME));
-//    m_uniformLocations.insert(m_WORLD_MATRIX_NAME, m_program->uniformLocation(m_WORLD_MATRIX_NAME));
-//    m_uniformLocations.insert(m_MY_MATRIX_NAME, m_program->uniformLocation(m_MY_MATRIX_NAME));
-//    m_uniformLocations.insert(m_LIGHT_POSITION_NAME, m_program->uniformLocation(m_LIGHT_POSITION_NAME));
+    m_projectionMatrixLocation = m_program->uniformLocation(m_PROJECTION_MATRIX_NAME);
+    m_modelMatrixLocation = m_program->uniformLocation(m_MODEL_MATRIX_NAME);
+    m_viewMatrixLocation = m_program->uniformLocation(m_VIEW_MATRIX_NAME);
 
     m_vertexArrayObject.reset(new QOpenGLVertexArrayObject);
     if (m_vertexArrayObject->create()) {
@@ -73,7 +105,7 @@ void GLWindow::initializeGL() {
     m_vertexBuffer->bind();
 
     // This copies the contents of the first parameter to the GPU
-    m_vertexBuffer->allocate(m_triangle_data.constData(), m_triangle_data.size() * sizeof(GLfloat));
+    m_vertexBuffer->allocate(m_triangleData.constData(), m_triangleData.size() * sizeof(GLfloat));
 
     // This enables `layout(location = 0) in vec4 vertex;` from the shader
     f->glEnableVertexAttribArray(0);
@@ -85,7 +117,6 @@ void GLWindow::initializeGL() {
 }
 
 void GLWindow::resizeGL(int w, int h) {
-//    m_uniformMatrices.insert(m_PROJECTION_MATRIX_NAME, QMatrix4x4());
 //    QMatrix4x4 tmp;
 //    tmp.perspective(45.0f, GLfloat(w) / h, 0.01f, 100.0f);
 //    m_uniformMatrices.insert(m_PROJECTION_MATRIX_NAME, tmp);
@@ -97,13 +128,20 @@ void GLWindow::paintGL() {
     f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_program->bind();
-//    QMatrix4x4 tmp;
-//    tmp.lookAt(QVector3D(0, 0, -1), QVector3D(0, 0, 0), QVector3D(0, 1, 0));
-//    m_uniformMatrices.insert(m_CAMERA_MATRIX_NAME, tmp);
-//    m_program->setUniformValue(m_uniformLocations.value(m_PROJECTION_MATRIX_NAME), m_uniformMatrices.value(m_PROJECTION_MATRIX_NAME));
-//    m_program->setUniformValue(m_uniformLocations.value(m_CAMERA_MATRIX_NAME), m_uniformMatrices.value(m_CAMERA_MATRIX_NAME));
-//    m_program->setUniformValue(m_uniformLocations.value(m_WORLD_MATRIX_NAME), m_uniformMatrices.value(m_WORLD_MATRIX_NAME));
-//    m_program->setUniformValue(m_uniformLocations.value(m_MY_MATRIX_NAME), m_uniformMatrices.value(m_MY_MATRIX_NAME));
 
-    f->glDrawArrays(GL_TRIANGLES, 0, m_triangle_data.size() / 3);
+    m_modelMatrix.translate(QVector3D(0.0, 0.0, 0.0));
+    m_viewMatrix.translate(QVector3D(0.0, 0.0, -3.0));
+    m_projectionMatrix.perspective(45.0, 800.0 / 600.0, 0.1, 100.0);
+
+    qDebug() << m_modelMatrix;
+    qDebug() << m_viewMatrix;
+    qDebug() << m_projectionMatrix;
+
+    m_program->setUniformValue(m_modelMatrixLocation, m_modelMatrix);
+    m_program->setUniformValue(m_viewMatrixLocation, m_viewMatrix);
+    m_program->setUniformValue(m_projectionMatrixLocation, m_projectionMatrix);
+
+    qDebug() << QTime::currentTime();
+
+    f->glDrawArrays(GL_TRIANGLES, 0, m_triangleData.size() / 3);
 }
