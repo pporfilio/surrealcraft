@@ -33,6 +33,9 @@ public:
     void resizeGL(int w, int h);
     void paintGL();
 
+private slots:
+    void onFrameSwapped(void);
+
 private:
     const QString m_PROJECTION_MATRIX_NAME = QString("projection");
     const QString m_VIEW_MATRIX_NAME = QString("view");
@@ -45,6 +48,11 @@ private:
     int m_modelMatrixLocation;
     int m_lightPositionLocation;
     int m_eyeLocation;
+
+    double m_radians = 0.0;
+
+    int m_screenWidth;
+    int m_screenHeight;
 
     QMatrix4x4 m_projectionMatrix = QMatrix4x4();
     QMatrix4x4 m_viewMatrix = QMatrix4x4();

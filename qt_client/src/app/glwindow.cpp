@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QCoreApplication>
 #include <QTime>
+#include <QtMath>
 
 void GLWindow::addVertex(QVector3D v) {
 
@@ -18,6 +19,8 @@ void GLWindow::addVertex(QVector3D v) {
 
 GLWindow::GLWindow()
 {
+
+    QObject::connect(this, SIGNAL(frameSwapped()), this, SLOT(onFrameSwapped()));
 
     this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
     this->addVertex(QVector3D(0.5f, -0.5f, -0.5f));
@@ -64,6 +67,10 @@ GLWindow::GLWindow()
 
 GLWindow::~GLWindow() {
     makeCurrent();
+}
+
+void GLWindow::onFrameSwapped() {
+    this->update();
 }
 
 void GLWindow::initializeGL() {
@@ -117,9 +124,8 @@ void GLWindow::initializeGL() {
 }
 
 void GLWindow::resizeGL(int w, int h) {
-//    QMatrix4x4 tmp;
-//    tmp.perspective(45.0f, GLfloat(w) / h, 0.01f, 100.0f);
-//    m_uniformMatrices.insert(m_PROJECTION_MATRIX_NAME, tmp);
+    m_screenWidth = w;
+    m_screenHeight = h;
 }
 
 void GLWindow::paintGL() {
@@ -130,10 +136,27 @@ void GLWindow::paintGL() {
     m_program->bind();
 
     m_modelMatrix.translate(QVector3D(0.0, 0.0, 0.0));
-    m_viewMatrix.translate(QVector3D(0.0, 0.0, -3.0));
-    m_projectionMatrix.perspective(45.0, 800.0 / 600.0, 0.1, 100.0);
 
-    qDebug() << m_modelMatrix;
+    m_radians += (M_PI / 60);
+    if (m_radians > M_PI) {
+        m_radians = 0;
+    }
+
+    float radius = 10.0f;
+
+    float camX = qSin(m_radians) * radius;
+    float camZ = qCos(m_radians) * radius;
+
+    m_viewMatrix.setToIdentity();
+    m_viewMatrix.lookAt(QVector3D(camX, 0.0, camZ), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
+
+    // Avoid divide by zero
+    if (m_screenHeight < 1) {
+        m_screenHeight = 1;
+    }
+    m_projectionMatrix.setToIdentity();
+    m_projectionMatrix.perspective(45.0, static_cast<float>(m_screenWidth) / m_screenHeight, 0.1, 100.0);
+
     qDebug() << m_viewMatrix;
     qDebug() << m_projectionMatrix;
 
