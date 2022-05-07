@@ -1,6 +1,8 @@
 #ifndef GLWINDOW_H
 #define GLWINDOW_H
 
+#include "inputstate.h"
+
 #include <QOpenGLWindow>
 #include <QMatrix4x4>
 #include <QVector3D>
@@ -9,15 +11,6 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
-
-//QT_BEGIN_NAMESPACE
-
-//class QOpenGLTexture;
-//class QOpenGLShaderProgram;
-//class QOpenGLBuffer;
-//class QOpenGLVertexArrayObject;
-
-//QT_END_NAMESPACE
 
 class GLWindow : public QOpenGLWindow
 {
@@ -32,6 +25,13 @@ public:
     void initializeGL();
     void resizeGL(int w, int h);
     void paintGL();
+
+protected:
+    virtual void keyPressEvent(QKeyEvent *ev);
+    virtual void keyReleaseEvent(QKeyEvent *ev);
+    virtual void mouseDoubleClickEvent(QMouseEvent *ev);
+    virtual void mouseMoveEvent(QMouseEvent *ev);
+    virtual void mouseReleaseEvent(QMouseEvent *ev);
 
 private slots:
     void onFrameSwapped(void);
@@ -70,6 +70,9 @@ private:
     QMap<QString, QVector3D> m_uniformVectors;
 
     QList<GLfloat> m_triangleData;
+
+    std::unique_ptr<InputState> m_currentInputState;
+    QVector<std::unique_ptr<InputState>> m_inputStateHistory;
 
 };
 

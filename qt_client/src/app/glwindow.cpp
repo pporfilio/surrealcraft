@@ -9,13 +9,6 @@
 #include <QTime>
 #include <QtMath>
 
-void GLWindow::addVertex(QVector3D v) {
-
-    m_triangleData.append(v.x());
-    m_triangleData.append(v.y());
-    m_triangleData.append(v.z());
-
-}
 
 GLWindow::GLWindow()
 {
@@ -69,9 +62,12 @@ GLWindow::~GLWindow() {
     makeCurrent();
 }
 
-void GLWindow::onFrameSwapped() {
-    this->update();
+void GLWindow::addVertex(QVector3D v) {
+    m_triangleData.append(v.x());
+    m_triangleData.append(v.y());
+    m_triangleData.append(v.z());
 }
+
 
 void GLWindow::initializeGL() {
     QOpenGLFunctions *f = QOpenGLContext::currentContext()->functions();
@@ -167,4 +163,27 @@ void GLWindow::paintGL() {
     qDebug() << QTime::currentTime();
 
     f->glDrawArrays(GL_TRIANGLES, 0, m_triangleData.size() / 3);
+}
+
+void GLWindow::keyPressEvent(QKeyEvent *ev) {
+
+}
+ void GLWindow::keyReleaseEvent(QKeyEvent *ev) {
+
+}
+
+void GLWindow::mouseDoubleClickEvent(QMouseEvent *ev) {
+
+}
+
+void GLWindow::mouseMoveEvent(QMouseEvent *ev) {
+
+}
+
+void GLWindow::mouseReleaseEvent(QMouseEvent *ev) {
+
+}
+
+void GLWindow::onFrameSwapped() {
+    this->update();
 }

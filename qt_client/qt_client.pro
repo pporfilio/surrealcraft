@@ -14,9 +14,13 @@ INCLUDEPATH += src/app
 
 DEPENDPATH += src/app
 
-HEADERS = src/app/glwindow.h
+HEADERS = src/app/glwindow.h \
+          src/app/camera.h \
+          src/app/inputstate.h
 
 SOURCES = src/app/glwindow.cpp \
+          src/app/camera.cpp \
+          src/app/inputstate.cpp \
           src/app/main.cpp
 
 COPIES += shaders
