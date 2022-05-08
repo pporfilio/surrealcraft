@@ -9,17 +9,26 @@ public:
     Camera();
 
     float getPitchRad();
-    void setPitchDeg(float pitch);
-    float getYawRad();
-    void setYawDeg(float yaw);
+    void setPitchDeg(float pitchDeg);
+    void addPitchDeg(float pitchDegDelta);
 
-    void moveDelta(QVector3D newPosition);
+    float getYawRad();
+    void setYawDeg(float yawDeg);
+    void addYawDeg(float yawDegDelta);
+
+    QVector3D getPosition();
+    void setPosition(QVector3D position);
+    void addPositionDelta(QVector3D delta);
+
+protected:
+    float degToRad(float inDeg);
+    float radToDeg(float inRad);
+    float fmod(float num, float denom);
 
 private:
-
     QVector3D m_position;
-    float m_pitch;
-    float m_yaw;
+    float m_pitchRad;
+    float m_yawRad;
 
 };
 
