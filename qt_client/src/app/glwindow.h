@@ -30,8 +30,10 @@ protected:
     virtual void keyPressEvent(QKeyEvent *ev);
     virtual void keyReleaseEvent(QKeyEvent *ev);
     virtual void mouseDoubleClickEvent(QMouseEvent *ev);
+    virtual void mousePressEvent(QMouseEvent *ev);
     virtual void mouseMoveEvent(QMouseEvent *ev);
     virtual void mouseReleaseEvent(QMouseEvent *ev);
+    virtual void wheelEvent(QWheelEvent *ev);
 
 private slots:
     void onFrameSwapped(void);
@@ -71,8 +73,8 @@ private:
 
     QList<GLfloat> m_triangleData;
 
-    std::unique_ptr<InputState> m_currentInputState;
-    QVector<std::unique_ptr<InputState>> m_inputStateHistory;
+    InputState m_currentInputState;
+    QVector<InputState> m_inputStateHistory;
 
 };
 

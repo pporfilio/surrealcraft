@@ -8,6 +8,8 @@
 #include <QCoreApplication>
 #include <QTime>
 #include <QtMath>
+#include <QKeyEvent>
+#include <QWheelEvent>
 
 
 GLWindow::GLWindow()
@@ -125,6 +127,8 @@ void GLWindow::resizeGL(int w, int h) {
 }
 
 void GLWindow::paintGL() {
+
+
     QOpenGLExtraFunctions *f = QOpenGLContext::currentContext()->extraFunctions();
     f->glClearColor(0, 0, 0, 1);
     f->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -153,8 +157,8 @@ void GLWindow::paintGL() {
     m_projectionMatrix.setToIdentity();
     m_projectionMatrix.perspective(45.0, static_cast<float>(m_screenWidth) / m_screenHeight, 0.1, 100.0);
 
-    qDebug() << m_viewMatrix;
-    qDebug() << m_projectionMatrix;
+//    qDebug() << m_viewMatrix;
+//    qDebug() << m_projectionMatrix;
 
     m_program->setUniformValue(m_modelMatrixLocation, m_modelMatrix);
     m_program->setUniformValue(m_viewMatrixLocation, m_viewMatrix);
@@ -166,22 +170,38 @@ void GLWindow::paintGL() {
 }
 
 void GLWindow::keyPressEvent(QKeyEvent *ev) {
-
+    qDebug() << "Got key press event " << ev->key();
+    m_currentInputState.m_keysPressed.insert(static_cast<Qt::Key>(ev->key()), true);
 }
- void GLWindow::keyReleaseEvent(QKeyEvent *ev) {
 
+void GLWindow::keyReleaseEvent(QKeyEvent *ev) {
+    qDebug() << "Got key release event " << ev->key();
+    m_currentInputState.m_keysPressed.insert(static_cast<Qt::Key>(ev->key()), false);
 }
 
 void GLWindow::mouseDoubleClickEvent(QMouseEvent *ev) {
+    Q_UNUSED(ev);
+}
 
+void GLWindow::mousePressEvent(QMouseEvent *ev) {
+    qDebug() << "Got mouse press event " << ev->button();
+    m_currentInputState.m_mouseButtonsPressed.insert(ev->button(), true);
 }
 
 void GLWindow::mouseMoveEvent(QMouseEvent *ev) {
+    qDebug() << "Got mouse move event " << ev->pos();
+    m_currentInputState.m_mousePosition = QVector2D(ev->pos().x(), ev->pos().y());
+    m_currentInputState.m_mousePositionSet = true;
+}
 
+void GLWindow::wheelEvent(QWheelEvent *ev) {
+    qDebug() << "Got wheel delta " << ev->angleDelta();
+    m_currentInputState.m_scrollAngleDelta += ev->angleDelta().x();
 }
 
 void GLWindow::mouseReleaseEvent(QMouseEvent *ev) {
-
+    qDebug() << "Got mouse release event " << ev->button();
+    m_currentInputState.m_mouseButtonsPressed.insert(ev->button(), false);
 }
 
 void GLWindow::onFrameSwapped() {
