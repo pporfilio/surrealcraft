@@ -2,11 +2,12 @@
 #define GLWINDOW_H
 
 #include "inputstate.h"
+#include "camera.h"
 
 #include <QOpenGLWindow>
 #include <QMatrix4x4>
 #include <QVector3D>
-
+#include <QElapsedTimer>
 #include <QOpenGLTexture>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
@@ -76,6 +77,10 @@ private:
     InputState m_currentInputState;
     QVector<InputState> m_inputStateHistory;
 
+    std::unique_ptr<Camera> m_camera;
+
+    qint64 m_previousFrameTime;
+    QElapsedTimer m_timer;
 };
 
 #endif // GLWINDOW_H

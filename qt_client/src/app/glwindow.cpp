@@ -14,6 +14,8 @@
 
 GLWindow::GLWindow()
 {
+    m_timer.start();
+    m_previousFrameTime = m_timer.msecsSinceReference();
 
     QObject::connect(this, SIGNAL(frameSwapped()), this, SLOT(onFrameSwapped()));
 
@@ -119,6 +121,8 @@ void GLWindow::initializeGL() {
     f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
 
     m_vertexBuffer->release();
+
+    m_camera.reset(new Camera);
 }
 
 void GLWindow::resizeGL(int w, int h) {
@@ -128,6 +132,12 @@ void GLWindow::resizeGL(int w, int h) {
 
 void GLWindow::paintGL() {
 
+    m_timer.start();
+    qint64 currentTime = m_timer.msecsSinceReference();
+    // I think casting to float here does not lose precision because the difference in
+    // time should be on the order of 1000s at most.
+    float tickDuration = static_cast<float>(currentTime - m_previousFrameTime) / 1000.0;
+    m_previousFrameTime = currentTime;
 
     QOpenGLExtraFunctions *f = QOpenGLContext::currentContext()->extraFunctions();
     f->glClearColor(0, 0, 0, 1);
@@ -137,18 +147,27 @@ void GLWindow::paintGL() {
 
     m_modelMatrix.translate(QVector3D(0.0, 0.0, 0.0));
 
-    m_radians += (M_PI / 60);
-    if (m_radians > M_PI) {
-        m_radians = 0;
+    m_viewMatrix.setToIdentity();
+
+    float movementScale = 1;
+    float deltaX = 0;
+    float deltaZ = 0;
+    if (m_currentInputState.m_keysPressed.value(Qt::Key_W, false)) {
+        deltaX += tickDuration * movementScale;
+    }
+    if (m_currentInputState.m_keysPressed.value(Qt::Key_S, false)) {
+        deltaX -= tickDuration * movementScale;
+    }
+    if (m_currentInputState.m_keysPressed.value(Qt::Key_A, false)) {
+        deltaZ -= tickDuration * movementScale;
+    }
+    if (m_currentInputState.m_keysPressed.value(Qt::Key_D, false)) {
+        deltaZ += tickDuration * movementScale;
     }
 
-    float radius = 10.0f;
+    m_camera->addPositionDelta(QVector3D(deltaX, 0, deltaZ));
 
-    float camX = qSin(m_radians) * radius;
-    float camZ = qCos(m_radians) * radius;
-
-    m_viewMatrix.setToIdentity();
-    m_viewMatrix.lookAt(QVector3D(camX, 0.0, camZ), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
+    m_viewMatrix.lookAt(m_camera->getPosition(), QVector3D(0.0, 0.0, 0.0), QVector3D(0.0, 1.0, 0.0));
 
     // Avoid divide by zero
     if (m_screenHeight < 1) {
