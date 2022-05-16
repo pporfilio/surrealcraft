@@ -36,6 +36,10 @@ protected:
     virtual void mouseReleaseEvent(QMouseEvent *ev);
     virtual void wheelEvent(QWheelEvent *ev);
 
+    static QVector3D getCameraPositionDelta(const InputState &inputState, float tickDuration);
+    static float getCameraYawDeltaDeg(const InputState &inputState, const InputState &previousInputState);
+    static float getCameraPitchDeltaDeg(const InputState &inputState, const InputState &previousInputState);
+
 private slots:
     void onFrameSwapped(void);
 
@@ -75,7 +79,7 @@ private:
     QList<GLfloat> m_triangleData;
 
     InputState m_currentInputState;
-    QVector<InputState> m_inputStateHistory;
+    InputState m_previousInputState;
 
     std::unique_ptr<Camera> m_camera;
 

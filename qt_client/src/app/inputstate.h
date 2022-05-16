@@ -16,6 +16,8 @@ public:
     QVector2D m_mousePosition;
 
     float m_scrollAngleDelta = 0;
+
+    bool keyPressed(Qt::Key key) const;
 };
 
 #endif // INPUTSTATE_H
