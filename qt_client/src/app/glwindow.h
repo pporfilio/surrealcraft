@@ -21,7 +21,8 @@ public:
     GLWindow();
     ~GLWindow();
 
-    void addVertex(QVector3D v);
+    void addCube(QVector3D center, QVector3D color);
+    void addVertex(QVector3D v, QVector3D translation, QVector3D color);
 
     void initializeGL();
     void resizeGL(int w, int h);

@@ -10,6 +10,7 @@
 #include <QtMath>
 #include <QKeyEvent>
 #include <QWheelEvent>
+#include <stdint.h>
 
 
 GLWindow::GLWindow()
@@ -21,57 +22,70 @@ GLWindow::GLWindow()
 
     QObject::connect(this, SIGNAL(frameSwapped()), this, SLOT(onFrameSwapped()));
 
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
-    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f));
-    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f));
-    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f));
-    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f));
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
-
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f));
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f));
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
-    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f));
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f));
-
-    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f));
-    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f));
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f));
-    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f));
-
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
-    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f));
-    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f));
-    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f));
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f));
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
-
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
-    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f));
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f));
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f));
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f));
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f));
-
-    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f));
-    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f));
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f));
-    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f));
-    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f));
+    addCube(QVector3D(5, 0, 0), QVector3D(1, 0, 0));
+    addCube(QVector3D(-5, 0, 0), QVector3D(1, 0, 0));
+    addCube(QVector3D(0, 5, 0), QVector3D(0, 1, 0));
+    addCube(QVector3D(0, -5, 0), QVector3D(0, 1, 0));
+    addCube(QVector3D(0, 0, 5), QVector3D(0, 0, 1));
+    addCube(QVector3D(0, 0, -5), QVector3D(0, 0, 1));
 }
 
 GLWindow::~GLWindow() {
     makeCurrent();
 }
 
-void GLWindow::addVertex(QVector3D v) {
-    m_triangleData.append(v.x());
-    m_triangleData.append(v.y());
-    m_triangleData.append(v.z());
+void GLWindow::addCube(QVector3D center, QVector3D color) {
+    this->addVertex(QVector3D(-0.f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
+
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
+
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
+
+}
+
+void GLWindow::addVertex(QVector3D v, QVector3D translation, QVector3D color) {
+    m_triangleData.append(v.x() + translation.x());
+    m_triangleData.append(v.y() + translation.y());
+    m_triangleData.append(v.z() + translation.z());
+    m_triangleData.append(color.x());
+    m_triangleData.append(color.y());
+    m_triangleData.append(color.z());
 }
 
 
@@ -116,11 +130,15 @@ void GLWindow::initializeGL() {
     // This copies the contents of the first parameter to the GPU
     m_vertexBuffer->allocate(m_triangleData.constData(), m_triangleData.size() * sizeof(GLfloat));
 
+    // This says that layout(location = 0) starts at 0 (nullptr) offset into the VBO
+    f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), nullptr);
+
     // This enables `layout(location = 0) in vec4 vertex;` from the shader
     f->glEnableVertexAttribArray(0);
 
-    // This says that layout(location = 0) starts at 0 (nullptr) offset into the VBO
-    f->glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), nullptr);
+    f->glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), reinterpret_cast<void *>(3 * sizeof(GLfloat)));
+    f->glEnableVertexAttribArray(1);
+
 
     m_vertexBuffer->release();
 
@@ -193,11 +211,6 @@ void GLWindow::paintGL() {
     // Make a local copy of the current and previous input state
     InputState inputState(m_currentInputState);
     InputState previousInputState(m_previousInputState);
-//    qDebug() << "-----------";
-//    qDebug() << previousInputState.m_mousePosition;
-//    qDebug() << inputState.m_mousePosition;
-//    qDebug() << "-----------";
-
 
     // Copy the current input state for next frame. Continue to update the same m_currentInputState
     // as new events come in.
@@ -226,14 +239,9 @@ void GLWindow::paintGL() {
     m_projectionMatrix.setToIdentity();
     m_projectionMatrix.perspective(45.0, static_cast<float>(m_screenWidth) / m_screenHeight, 0.1, 100.0);
 
-//    qDebug() << m_viewMatrix;
-//    qDebug() << m_projectionMatrix;
-
     m_program->setUniformValue(m_modelMatrixLocation, m_modelMatrix);
     m_program->setUniformValue(m_viewMatrixLocation, m_viewMatrix);
     m_program->setUniformValue(m_projectionMatrixLocation, m_projectionMatrix);
-
-//    qDebug() << QTime::currentTime();
 
     f->glDrawArrays(GL_TRIANGLES, 0, m_triangleData.size() / 3);
 }
