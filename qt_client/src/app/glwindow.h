@@ -36,7 +36,7 @@ protected:
     virtual void mouseReleaseEvent(QMouseEvent *ev);
     virtual void wheelEvent(QWheelEvent *ev);
 
-    static QVector3D getCameraPositionDelta(const InputState &inputState, float tickDuration);
+    static QVector3D getCameraPositionDelta(const std::unique_ptr<Camera> &camera, const InputState &inputState, float tickDuration);
     static float getCameraYawDeltaDeg(const InputState &inputState, const InputState &previousInputState);
     static float getCameraPitchDeltaDeg(const InputState &inputState, const InputState &previousInputState);
 

@@ -14,6 +14,8 @@
 
 GLWindow::GLWindow()
 {
+    resize(800, 600);
+
     m_timer.start();
     m_previousFrameTime = m_timer.msecsSinceReference();
 
@@ -130,30 +132,34 @@ void GLWindow::resizeGL(int w, int h) {
     m_screenHeight = h;
 }
 
-QVector3D GLWindow::getCameraPositionDelta(const InputState &inputState, float tickDuration) {
+QVector3D GLWindow::getCameraPositionDelta(const std::unique_ptr<Camera> &camera, const InputState &inputState, float tickDuration) {
     float movementScale = 1;
-    float deltaX = 0;
-    float deltaY = 0;
-    float deltaZ = 0;
+    float deltaForward = 0;
+    float deltaUp = 0;
+    float deltaRight = 0;
     if (inputState.keyPressed(Qt::Key_W)) {
-        deltaX += tickDuration * movementScale;
+        deltaForward += tickDuration * movementScale;
     }
     if (inputState.keyPressed(Qt::Key_S)) {
-        deltaX -= tickDuration * movementScale;
+        deltaForward -= tickDuration * movementScale;
     }
     if (inputState.keyPressed(Qt::Key_A)) {
-        deltaZ -= tickDuration * movementScale;
+        deltaRight -= tickDuration * movementScale;
     }
     if (inputState.keyPressed(Qt::Key_D)) {
-        deltaZ += tickDuration * movementScale;
+        deltaRight += tickDuration * movementScale;
     }
     if (inputState.keyPressed(Qt::Key_Q)) {
-        deltaY -= tickDuration * movementScale;
+        deltaUp -= tickDuration * movementScale;
     }
     if (inputState.keyPressed(Qt::Key_E)) {
-        deltaY += tickDuration * movementScale;
+        deltaUp += tickDuration * movementScale;
     }
-    return QVector3D(deltaX, deltaY, deltaZ);
+
+    return deltaForward * camera->getLookVector() + \
+            deltaUp * camera->getUpVector() + \
+            deltaRight * QVector3D::crossProduct(camera->getLookVector(),
+                                                 camera->getUpVector()).normalized();
 }
 
 float GLWindow::getCameraYawDeltaDeg(const InputState &inputState,
@@ -187,10 +193,10 @@ void GLWindow::paintGL() {
     // Make a local copy of the current and previous input state
     InputState inputState(m_currentInputState);
     InputState previousInputState(m_previousInputState);
-    qDebug() << "-----------";
-    qDebug() << previousInputState.m_mousePosition;
-    qDebug() << inputState.m_mousePosition;
-    qDebug() << "-----------";
+//    qDebug() << "-----------";
+//    qDebug() << previousInputState.m_mousePosition;
+//    qDebug() << inputState.m_mousePosition;
+//    qDebug() << "-----------";
 
 
     // Copy the current input state for next frame. Continue to update the same m_currentInputState
@@ -207,11 +213,11 @@ void GLWindow::paintGL() {
 
     m_viewMatrix.setToIdentity();
 
-    m_camera->addPositionDelta(getCameraPositionDelta(inputState, tickDuration));
+    m_camera->addPositionDelta(getCameraPositionDelta(m_camera, inputState, tickDuration));
     m_camera->addPitchDeg(getCameraPitchDeltaDeg(inputState, previousInputState));
     m_camera->addYawDeg(getCameraYawDeltaDeg(inputState, previousInputState));
 
-    m_viewMatrix.lookAt(m_camera->getPosition(), m_camera->getLookVector(), QVector3D(0.0, 1.0, 0.0));
+    m_viewMatrix.lookAt(m_camera->getPosition(), m_camera->getPosition() + m_camera->getLookVector(), m_camera->getUpVector());
 
     // Avoid divide by zero
     if (m_screenHeight < 1) {
@@ -227,7 +233,7 @@ void GLWindow::paintGL() {
     m_program->setUniformValue(m_viewMatrixLocation, m_viewMatrix);
     m_program->setUniformValue(m_projectionMatrixLocation, m_projectionMatrix);
 
-    qDebug() << QTime::currentTime();
+//    qDebug() << QTime::currentTime();
 
     f->glDrawArrays(GL_TRIANGLES, 0, m_triangleData.size() / 3);
 }

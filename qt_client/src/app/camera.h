@@ -18,6 +18,7 @@ public:
     void setYawRad(float yawRad);
     void addYawDeg(float yawDegDelta);
     QVector3D getLookVector() const;
+    QVector3D getUpVector() const;
 
     void setPosition(QVector3D position);
     void addPositionDelta(QVector3D delta);

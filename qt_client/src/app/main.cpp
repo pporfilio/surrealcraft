@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     QSurfaceFormat::setDefaultFormat(fmt);
 
     GLWindow glWindow;
-    glWindow.showMaximized();
+    glWindow.show();
 
     return app.exec();
 }
