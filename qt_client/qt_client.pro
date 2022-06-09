@@ -16,12 +16,18 @@ DEPENDPATH += src/app
 
 HEADERS = src/app/glwindow.h \
           src/app/camera.h \
-          src/app/inputstate.h
+          src/app/inputstate.h \
+          src/app/trianglemesh.h \
+          src/app/vectori3d.h \
+          src/app/voxeldata.h
 
 SOURCES = src/app/glwindow.cpp \
           src/app/camera.cpp \
           src/app/inputstate.cpp \
-          src/app/main.cpp
+          src/app/main.cpp \
+          src/app/trianglemesh.cpp \
+          src/app/vectori3d.cpp \
+          src/app/voxeldata.cpp
 
 COPIES += shaders
 
