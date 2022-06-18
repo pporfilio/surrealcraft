@@ -4,9 +4,9 @@
 #include <QDebug>
 
 
-VoxelData::VoxelData(const VectorI3D &dimensions)
+VoxelData::VoxelData(const VectorI3D &dimensions) : m_dimensions(dimensions)
 {
-    int voxelCount = dimensions.x() * dimensions.y() * dimensions.z();
+    int voxelCount = m_dimensions.x() * m_dimensions.y() * m_dimensions.z();
     if (voxelCount > 20 * 1000 * 1000) {
         qDebug() << "Tried to make VoxelData with too many voxels:" << voxelCount;
     }

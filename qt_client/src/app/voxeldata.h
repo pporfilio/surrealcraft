@@ -10,6 +10,8 @@
 // Array rate of change a[slowest][middle][fastest]
 // Voxel coordinates (x, y, z)
 
+// TODO: Add test that reading and writing the data to disk
+// has the correct array ordering.
 
 class VoxelData
 {

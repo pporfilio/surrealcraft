@@ -41,3 +41,8 @@ bool operator==(const VectorI3D v1, const VectorI3D v2) {
 QVector3D VectorI3D::asQVector() const {
     return QVector3D(data[0], data[1], data[2]);
 }
+
+QDebug operator<<(QDebug dbg, const VectorI3D &v1) {
+    dbg << "(" << v1.x() << ", " << v1.y() << ", " << v1.z() << ")";
+    return dbg;
+}
