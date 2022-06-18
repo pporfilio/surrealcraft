@@ -4,7 +4,7 @@ VectorI3D::VectorI3D(): data{0, 0, 0} {};
 
 VectorI3D::VectorI3D(int x, int y, int z): data{x, y, z} {};
 
-VectorI3D::VectorI3D(VectorI3D &other): data{other.x(), other.y(), other.z()} {};
+VectorI3D::VectorI3D(const VectorI3D &other): data{other.x(), other.y(), other.z()} {};
 
 int VectorI3D::x() const { return data[0]; }
 int VectorI3D::y() const { return data[1]; }
@@ -32,6 +32,10 @@ VectorI3D operator*(const VectorI3D v1, int n)  {
 
 VectorI3D operator/(const VectorI3D v1, int n)  {
     return VectorI3D(v1.data[0] / n, v1.data[1] / n, v1.data[2] / n);
+}
+
+bool operator==(const VectorI3D v1, const VectorI3D v2) {
+    return v1.data[0] == v2.data[0] && v1.data[1] == v2.data[1] && v1.data[2] == v2.data[2];
 }
 
 QVector3D VectorI3D::asQVector() const {

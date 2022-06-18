@@ -18,6 +18,7 @@ public:
 
     static VoxelData* fromFile(const QString path);
 
+    VectorI3D dimensions() const;
     bool hasVoxel(const VectorI3D &indices) const;
 
     QVector3D voxelColor(const VectorI3D &indices) const;
@@ -25,11 +26,10 @@ public:
     void setVoxelValue(VectorI3D indices, char value);
     void setVoxelColor(VectorI3D indices, QVector3D color);
 
+    char* copyOfData() const;
+
 private:
     char* pointerTo(const VectorI3D &indices) const;
-
-
-
     std::unique_ptr<char[]> m_data;
     VectorI3D m_dimensions;
     static const int m_voxelBytes = 4;

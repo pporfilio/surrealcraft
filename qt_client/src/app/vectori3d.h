@@ -7,7 +7,7 @@ class VectorI3D {
 public:
     VectorI3D();
     VectorI3D(int x, int y, int z);
-    VectorI3D(VectorI3D &other);
+    VectorI3D(const VectorI3D &other);
 
     int x() const;
     int y() const;
@@ -19,6 +19,7 @@ public:
     friend VectorI3D operator-(const VectorI3D v1, int n);
     friend VectorI3D operator*(const VectorI3D v1, int n);
     friend VectorI3D operator/(const VectorI3D v1, int n);
+    friend bool operator==(const VectorI3D v1, VectorI3D v2);
 
     QVector3D asQVector() const;
 

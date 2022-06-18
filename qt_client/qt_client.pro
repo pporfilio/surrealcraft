@@ -27,7 +27,8 @@ SOURCES = src/app/glwindow.cpp \
           src/app/main.cpp \
           src/app/trianglemesh.cpp \
           src/app/vectori3d.cpp \
-          src/app/voxeldata.cpp
+          src/app/voxeldata.cpp \
+          src/test/testvoxeldata.cpp
 
 COPIES += shaders
 
@@ -35,4 +36,3 @@ shaders.files = src/shaders/scene.vert \
                 src/shaders/scene.frag
 
 shaders.path = $$DESTDIR/shaders
-

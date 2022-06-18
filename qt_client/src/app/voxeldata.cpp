@@ -18,10 +18,14 @@ char* VoxelData::pointerTo(const VectorI3D &indices) const {
 }
 
 VoxelData* VoxelData::fromFile(const QString path) {
-
+    return new VoxelData(VectorI3D(0, 0, 0));
 }
 
 bool VoxelData::hasVoxel(const VectorI3D &indices) const {
-    return false;
+    return pointerTo(indices)[0] != 0;
+}
+
+VectorI3D VoxelData::dimensions() const {
+    return m_dimensions;
 }
 
