@@ -4,14 +4,13 @@
 #include <QObject>
 #include <QTest>
 
-class TestVoxelData : public QObject, public VoxelData
+class TestVoxelData : public QObject
 {
     Q_OBJECT
 public:
     explicit TestVoxelData(QObject *parent = nullptr);
 
 private slots:
-    void pointerTo();
     void zeroSize();
 };
 
@@ -26,12 +25,6 @@ void TestVoxelData::zeroSize() {
     QCOMPARE(vd.dimensions(), VectorI3D());
 }
 
-void TestVoxelData::pointerTo() {
-    VoxelData vd(VectorI3D(3, 4, 5));
-
-
-    QCOMPARE(true, true);
-}
 
 QTEST_MAIN(TestVoxelData)
 #include "testvoxeldata.moc"
