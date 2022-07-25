@@ -10,7 +10,7 @@ class TriangleMesh
 public:
     TriangleMesh();
 
-    TriangleMesh(VoxelData voxels);
+    TriangleMesh(VoxelData<Voxel> voxels);
 
     QList<float> toVertexData();
 };

@@ -55,30 +55,30 @@ void Camera::setYawDeg(float yawDeg) {
 }
 
 void Camera::setYawRad(float yawRad) {
-    qDebug() << "Requesting to set yaw Rad to" << yawRad;
+//    qDebug() << "Requesting to set yaw Rad to" << yawRad;
     if (m_yawRad == yawRad) {
         return;
     }
     m_yawRad = yawRad;
-    qDebug() << "Yaw set to " << m_yawRad;
+//    qDebug() << "Yaw set to " << m_yawRad;
     if (m_yawRad < 0) {
-        qDebug() << "less than 0";
-        qDebug() << "fmod" << fmod(m_yawRad, -1 * 2 * M_PI);
-        qDebug() << "2 * M_PI" << 2 * M_PI;
+//        qDebug() << "less than 0";
+//        qDebug() << "fmod" << fmod(m_yawRad, -1 * 2 * M_PI);
+//        qDebug() << "2 * M_PI" << 2 * M_PI;
         m_yawRad = 2 * M_PI + fmod(m_yawRad, -1 * 2 * M_PI);
     }
     if (m_yawRad > 2 * M_PI) {
-        qDebug() << "greater than 2pi";
-        qDebug() << "less than 0";
-        qDebug() << "fmod" << fmod(m_yawRad, -1 * 2 * M_PI);
-        qDebug() << "2 * M_PI" << 2 * M_PI;
+//        qDebug() << "greater than 2pi";
+//        qDebug() << "less than 0";
+//        qDebug() << "fmod" << fmod(m_yawRad, -1 * 2 * M_PI);
+//        qDebug() << "2 * M_PI" << 2 * M_PI;
         m_yawRad = fmod(m_yawRad, 2 * M_PI);
     }
 }
 
 void Camera::addYawDeg(float yawDegDelta) {
     if (yawDegDelta != 0) {
-        qDebug() << "yawDegDelta" << yawDegDelta << "yawRadDelta" << degToRad(yawDegDelta);
+//        qDebug() << "yawDegDelta" << yawDegDelta << "yawRadDelta" << degToRad(yawDegDelta);
     }
     setYawRad(m_yawRad + degToRad(yawDegDelta));
 }

@@ -3,6 +3,7 @@
 
 #include "inputstate.h"
 #include "camera.h"
+#include "voxeldata.h"
 
 #include <QOpenGLWindow>
 #include <QMatrix4x4>
@@ -12,6 +13,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLBuffer>
 #include <QOpenGLVertexArrayObject>
+
 
 class GLWindow : public QOpenGLWindow
 {
@@ -77,6 +79,7 @@ private:
     QMap<QString, QMatrix4x4> m_uniformMatrices;
     QMap<QString, QVector3D> m_uniformVectors;
 
+    VoxelData<Voxel> m_voxelData;
     QList<GLfloat> m_triangleData;
 
     InputState m_currentInputState;

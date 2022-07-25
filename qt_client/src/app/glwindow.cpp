@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 
-GLWindow::GLWindow()
+GLWindow::GLWindow() : m_voxelData(VectorI3D(10, 20, 1))
 {
     resize(800, 600);
 
@@ -22,12 +22,36 @@ GLWindow::GLWindow()
 
     QObject::connect(this, SIGNAL(frameSwapped()), this, SLOT(onFrameSwapped()));
 
-    addCube(QVector3D(5, 0, 0), QVector3D(1, 0, 0));
-    addCube(QVector3D(-5, 0, 0), QVector3D(1, 0, 0));
-    addCube(QVector3D(0, 5, 0), QVector3D(0, 1, 0));
-    addCube(QVector3D(0, -5, 0), QVector3D(0, 1, 0));
-    addCube(QVector3D(0, 0, 5), QVector3D(0, 0, 1));
-    addCube(QVector3D(0, 0, -5), QVector3D(0, 0, 1));
+    bool present = true;
+    for (int x = 0; x < 10; ++x) {
+        for (int y = 0; y < 20; ++y) {
+            if (present) {
+                m_voxelData.setDataAt(VectorI3D(x, y, 0), Voxel(1, 0.5, 0.001 * x * y, 0.2));
+            }
+            present = !present;
+            qDebug() << present;
+        }
+    }
+
+
+    for (int x = 0; x < m_voxelData.dimensions().x(); ++x) {
+        for (int y = 0; y < m_voxelData.dimensions().y(); ++y) {
+            for (int z = 0; z < m_voxelData.dimensions().z(); ++z) {
+                qDebug() << x << y << z;
+                Voxel voxel = m_voxelData.dataAt(VectorI3D(x, y, z));
+                qDebug() << voxel.m_value << voxel.m_g;
+                if (voxel.m_value != 0) {
+                    addCube(QVector3D(x + 0.5, y + 0.5, z + 0.5), QVector3D(voxel.m_r, voxel.m_g, voxel.m_b));
+                }
+            }
+        }
+    }
+//    addCube(QVector3D(5, 0, 0), QVector3D(1, 0, 0));
+//    addCube(QVector3D(-5, 0, 0), QVector3D(1, 0, 0));
+//    addCube(QVector3D(0, 5, 0), QVector3D(0, 1, 0));
+//    addCube(QVector3D(0, -5, 0), QVector3D(0, 1, 0));
+//    addCube(QVector3D(0, 0, 5), QVector3D(0, 0, 1));
+//    addCube(QVector3D(0, 0, -5), QVector3D(0, 0, 1));
 }
 
 GLWindow::~GLWindow() {

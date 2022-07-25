@@ -6,8 +6,7 @@ DEPENDPATH += ../app
 HEADERS = ../app/vectori3d.h \
           ../app/voxeldata.h
 
-SOURCES = ../app/voxeldata.cpp \
-          ../app/vectori3d.cpp \
+SOURCES = ../app/vectori3d.cpp \
           testvoxeldata.cpp
 
 
