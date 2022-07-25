@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 
-GLWindow::GLWindow() : m_voxelData(VectorI3D(10, 20, 1))
+GLWindow::GLWindow() : m_voxelData(VectorI3D(10, 21, 1))
 {
     resize(800, 600);
 
@@ -24,7 +24,7 @@ GLWindow::GLWindow() : m_voxelData(VectorI3D(10, 20, 1))
 
     bool present = true;
     for (int x = 0; x < 10; ++x) {
-        for (int y = 0; y < 20; ++y) {
+        for (int y = 0; y < 21; ++y) {
             if (present) {
                 m_voxelData.setDataAt(VectorI3D(x, y, 0), Voxel(1, 0.5, 0.001 * x * y, 0.2));
             }
@@ -41,7 +41,7 @@ GLWindow::GLWindow() : m_voxelData(VectorI3D(10, 20, 1))
                 Voxel voxel = m_voxelData.dataAt(VectorI3D(x, y, z));
                 qDebug() << voxel.m_value << voxel.m_g;
                 if (voxel.m_value != 0) {
-                    addCube(QVector3D(x + 0.5, y + 0.5, z + 0.5), QVector3D(voxel.m_r, voxel.m_g, voxel.m_b));
+                    addCube(QVector3D(x + 0.5, z + 0.5, y + 0.5), QVector3D(voxel.m_r, voxel.m_g, voxel.m_b));
                 }
             }
         }
@@ -175,7 +175,7 @@ void GLWindow::resizeGL(int w, int h) {
 }
 
 QVector3D GLWindow::getCameraPositionDelta(const std::unique_ptr<Camera> &camera, const InputState &inputState, float tickDuration) {
-    float movementScale = 1;
+    float movementScale = 5;
     float deltaForward = 0;
     float deltaUp = 0;
     float deltaRight = 0;
