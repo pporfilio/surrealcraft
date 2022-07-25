@@ -186,7 +186,7 @@ float GLWindow::getCameraYawDeltaDeg(const InputState &inputState,
     if (!previousInputState.m_mousePositionSet) {
         return 0;
     }
-    return (inputState.m_mousePosition.x() - previousInputState.m_mousePosition.x()) * rotateScale;
+    return (inputState.m_mouseDelta.x() - previousInputState.m_mouseDelta.x()) * rotateScale;
 }
 
 float GLWindow::getCameraPitchDeltaDeg(const InputState &inputState,
@@ -196,7 +196,7 @@ float GLWindow::getCameraPitchDeltaDeg(const InputState &inputState,
         return 0;
     }
     // Negative one because y is bigger at the bottom than the top of the window.
-    return -1 * (inputState.m_mousePosition.y() - previousInputState.m_mousePosition.y()) * rotateScale;
+    return -1 * (inputState.m_mouseDelta.y() - previousInputState.m_mouseDelta.y()) * rotateScale;
 }
 
 void GLWindow::paintGL() {
@@ -267,8 +267,17 @@ void GLWindow::mousePressEvent(QMouseEvent *ev) {
 
 void GLWindow::mouseMoveEvent(QMouseEvent *ev) {
     qDebug() << "Got mouse move event " << ev->pos();
-    m_currentInputState.m_mousePosition = QVector2D(ev->pos().x(), ev->pos().y());
+    int deltaX = ev->pos().x() - width() / 2;
+    int deltaY = ev->pos().y() - height() / 2;
+    if (deltaX == 0 && deltaY == 0) {
+        // If the mouse is at the center, then this should be because we moved the cursor
+        // there after reading the user's last move.
+        return;
+    }
+
+    m_currentInputState.m_mouseDelta += QVector2D(deltaX, deltaY);
     m_currentInputState.m_mousePositionSet = true;
+    QCursor::setPos(mapToGlobal(QPoint(width() / 2, height() / 2)));
 }
 
 void GLWindow::wheelEvent(QWheelEvent *ev) {

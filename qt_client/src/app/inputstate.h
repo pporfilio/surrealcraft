@@ -13,7 +13,7 @@ public:
     QMap<Qt::MouseButton, bool> m_mouseButtonsPressed;
 
     bool m_mousePositionSet = false;
-    QVector2D m_mousePosition;
+    QVector2D m_mouseDelta;
 
     float m_scrollAngleDelta = 0;
 
