@@ -26,7 +26,8 @@ SOURCES = src/app/glwindow.cpp \
           src/app/inputstate.cpp \
           src/app/main.cpp \
           src/app/trianglemesh.cpp \
-          src/app/vectori3d.cpp
+          src/app/vectori3d.cpp \
+          src/app/voxeldata.cpp
 
 COPIES += shaders
 

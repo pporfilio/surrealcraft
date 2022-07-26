@@ -7,6 +7,7 @@ HEADERS = ../app/vectori3d.h \
           ../app/voxeldata.h
 
 SOURCES = ../app/vectori3d.cpp \
+          ../app/voxeldata.cpp \
           testvoxeldata.cpp
 
 
