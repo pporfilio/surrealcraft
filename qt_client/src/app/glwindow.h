@@ -87,6 +87,7 @@ private:
     InputState m_previousInputState;
 
     std::unique_ptr<Camera> m_camera;
+    float m_movementScale = 5;
 
     qint64 m_previousFrameTime;
     QElapsedTimer m_timer;

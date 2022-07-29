@@ -39,9 +39,9 @@ GLWindow::GLWindow() : m_voxelData(VectorI3D())
     for (int x = 0; x < m_voxelData.dimensions().x(); ++x) {
         for (int y = 0; y < m_voxelData.dimensions().y(); ++y) {
             for (int z = 0; z < m_voxelData.dimensions().z(); ++z) {
-                qDebug() << x << y << z;
+//                qDebug() << x << y << z;
                 Voxel voxel = m_voxelData.dataAt(VectorI3D(x, y, z));
-                qDebug() << voxel;
+//                qDebug() << voxel;
                 if (voxel.m_value != 0) {
                     addCube(QVector3D(x + 0.5, z + 0.5, y + 0.5), QVector3D(voxel.m_r, voxel.m_g, voxel.m_b));
                 }
@@ -250,27 +250,26 @@ void GLWindow::resizeGL(int w, int h) {
 }
 
 QVector3D GLWindow::getCameraPositionDelta(const std::unique_ptr<Camera> &camera, const InputState &inputState, float tickDuration) {
-    float movementScale = 5;
     float deltaForward = 0;
     float deltaUp = 0;
     float deltaRight = 0;
     if (inputState.keyPressed(Qt::Key_W)) {
-        deltaForward += tickDuration * movementScale;
+        deltaForward += tickDuration;
     }
     if (inputState.keyPressed(Qt::Key_S)) {
-        deltaForward -= tickDuration * movementScale;
+        deltaForward -= tickDuration;
     }
     if (inputState.keyPressed(Qt::Key_A)) {
-        deltaRight -= tickDuration * movementScale;
+        deltaRight -= tickDuration;
     }
     if (inputState.keyPressed(Qt::Key_D)) {
-        deltaRight += tickDuration * movementScale;
+        deltaRight += tickDuration;
     }
     if (inputState.keyPressed(Qt::Key_Q)) {
-        deltaUp -= tickDuration * movementScale;
+        deltaUp -= tickDuration;
     }
     if (inputState.keyPressed(Qt::Key_E)) {
-        deltaUp += tickDuration * movementScale;
+        deltaUp += tickDuration ;
     }
 
     return deltaForward * camera->getLookVector() + \
@@ -325,7 +324,19 @@ void GLWindow::paintGL() {
 
     m_viewMatrix.setToIdentity();
 
-    m_camera->addPositionDelta(getCameraPositionDelta(m_camera, inputState, tickDuration));
+    if (inputState.keyPressed(Qt::Key_1)) {
+        m_movementScale = m_movementScale - 0.2;
+    }
+    if (inputState.keyPressed(Qt::Key_2)) {
+        m_movementScale = m_movementScale + 0.2;
+    }
+    if (m_movementScale > 100) {
+        m_movementScale = 100;
+    }
+    if (m_movementScale < 1) {
+        m_movementScale = 1;
+    }
+    m_camera->addPositionDelta(getCameraPositionDelta(m_camera, inputState, tickDuration) * m_movementScale);
     m_camera->addPitchDeg(getCameraPitchDeltaDeg(inputState, previousInputState));
     m_camera->addYawDeg(getCameraYawDeltaDeg(inputState, previousInputState));
 
@@ -336,7 +347,7 @@ void GLWindow::paintGL() {
         m_screenHeight = 1;
     }
     m_projectionMatrix.setToIdentity();
-    m_projectionMatrix.perspective(45.0, static_cast<float>(m_screenWidth) / m_screenHeight, 0.1, 100.0);
+    m_projectionMatrix.perspective(45.0, static_cast<float>(m_screenWidth) / m_screenHeight, 0.1, 1000.0);
 
     m_program->setUniformValue(m_modelMatrixLocation, m_modelMatrix);
     m_program->setUniformValue(m_viewMatrixLocation, m_viewMatrix);
