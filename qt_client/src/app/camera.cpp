@@ -34,7 +34,7 @@ void Camera::setPitchRad(float pitchRad) {
         return;
     }
     m_pitchRad = pitchRad;
-    qDebug() << "Pitch set to " << m_yawRad;
+//    qDebug() << "Pitch set to " << m_pitchRad;
     if (m_pitchRad < 0) {
         m_pitchRad = 2 * M_PI + fmod(m_pitchRad, -1 * 2 * M_PI);
     }

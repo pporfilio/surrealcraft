@@ -22,7 +22,7 @@ GLWindow::GLWindow() : m_voxelData(VectorI3D())
 
     QObject::connect(this, SIGNAL(frameSwapped()), this, SLOT(onFrameSwapped()));
 
-    m_voxelData = voxelsFromFile("C:\\screenshots_and_videos\\wanderer_hat.vd");
+    m_voxelData = voxelsFromFile("C:\\screenshots_and_videos\\wanderer.vd");
 
 //    bool present = true;
 //    for (int x = 0; x < 10; ++x) {
@@ -346,12 +346,12 @@ void GLWindow::paintGL() {
 }
 
 void GLWindow::keyPressEvent(QKeyEvent *ev) {
-    qDebug() << "Got key press event " << ev->key();
+//    qDebug() << "Got key press event " << ev->key();
     m_currentInputState.m_keysPressed.insert(static_cast<Qt::Key>(ev->key()), true);
 }
 
 void GLWindow::keyReleaseEvent(QKeyEvent *ev) {
-    qDebug() << "Got key release event " << ev->key();
+//    qDebug() << "Got key release event " << ev->key();
     m_currentInputState.m_keysPressed.insert(static_cast<Qt::Key>(ev->key()), false);
 }
 
@@ -360,12 +360,12 @@ void GLWindow::mouseDoubleClickEvent(QMouseEvent *ev) {
 }
 
 void GLWindow::mousePressEvent(QMouseEvent *ev) {
-    qDebug() << "Got mouse press event " << ev->button();
+//    qDebug() << "Got mouse press event " << ev->button();
     m_currentInputState.m_mouseButtonsPressed.insert(ev->button(), true);
 }
 
 void GLWindow::mouseMoveEvent(QMouseEvent *ev) {
-    qDebug() << "Got mouse move event " << ev->pos();
+//    qDebug() << "Got mouse move event " << ev->pos();
     int deltaX = ev->pos().x() - width() / 2;
     int deltaY = ev->pos().y() - height() / 2;
     if (deltaX == 0 && deltaY == 0) {
@@ -380,12 +380,12 @@ void GLWindow::mouseMoveEvent(QMouseEvent *ev) {
 }
 
 void GLWindow::wheelEvent(QWheelEvent *ev) {
-    qDebug() << "Got wheel delta " << ev->angleDelta();
+//    qDebug() << "Got wheel delta " << ev->angleDelta();
     m_currentInputState.m_scrollAngleDelta += ev->angleDelta().x();
 }
 
 void GLWindow::mouseReleaseEvent(QMouseEvent *ev) {
-    qDebug() << "Got mouse release event " << ev->button();
+//    qDebug() << "Got mouse release event " << ev->button();
     m_currentInputState.m_mouseButtonsPressed.insert(ev->button(), false);
 }
 
