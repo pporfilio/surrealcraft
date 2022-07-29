@@ -22,7 +22,7 @@ GLWindow::GLWindow() : m_voxelData(VectorI3D())
 
     QObject::connect(this, SIGNAL(frameSwapped()), this, SLOT(onFrameSwapped()));
 
-    m_voxelData = voxelsFromFile("C:\\screenshots_and_videos\\wanderer.vd");
+    m_voxelData = voxelsFromFile("C:\\screenshots_and_videos\\wanderer_intensity.vd");
 
 //    bool present = true;
 //    for (int x = 0; x < 10; ++x) {
@@ -119,60 +119,62 @@ void GLWindow::addCube(QVector3D center, QVector3D color) {
     // Remember that Pitch = 0, Yaw = 0 means we're looking toward
     // positive X with negative Z to the left, in OpenGL's coordinate system
 
-    // Back face
-    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+    float cube_scale = 0.5;
 
-    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+    // Back face
+    this->addVertex(QVector3D(cube_scale,  cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale, -cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale, -cube_scale, -cube_scale), center, color);
+
+    this->addVertex(QVector3D(-cube_scale,  cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale,  cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale, -cube_scale, -cube_scale), center, color);
 
     // Front face
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-cube_scale, -cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale, -cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale,  cube_scale,  cube_scale), center, color);
 
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(cube_scale,  cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale,  cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale, -cube_scale,  cube_scale), center, color);
 
     // Left face
-    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(-cube_scale,  cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale,  cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale, -cube_scale, -cube_scale), center, color);
 
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-cube_scale, -cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale, -cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale,  cube_scale,  cube_scale), center, color);
 
     // Right face
-    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(cube_scale, -cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale,  cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale,  cube_scale,  cube_scale), center, color);
 
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(cube_scale,  cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale, -cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale, -cube_scale, -cube_scale), center, color);
 
 
     // Bottom face
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-cube_scale, -cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale, -cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale, -cube_scale,  cube_scale), center, color);
 
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(cube_scale, -cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale, -cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale, -cube_scale, -cube_scale), center, color);
 
     // Top face
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(cube_scale,  cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale,  cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale,  cube_scale, -cube_scale), center, color);
 
-    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-cube_scale,  cube_scale, -cube_scale), center, color);
+    this->addVertex(QVector3D(-cube_scale,  cube_scale,  cube_scale), center, color);
+    this->addVertex(QVector3D(cube_scale,  cube_scale,  cube_scale), center, color);
 }
 
 void GLWindow::addVertex(QVector3D v, QVector3D translation, QVector3D color) {
