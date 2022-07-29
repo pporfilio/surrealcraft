@@ -25,6 +25,7 @@ public:
 
     void addCube(QVector3D center, QVector3D color);
     void addVertex(QVector3D v, QVector3D translation, QVector3D color);
+    void addTestCube(QVector3D center);
 
     void initializeGL();
     void resizeGL(int w, int h);

@@ -13,7 +13,7 @@
 #include <stdint.h>
 
 
-GLWindow::GLWindow() : m_voxelData(VectorI3D(10, 21, 1))
+GLWindow::GLWindow() : m_voxelData(VectorI3D())
 {
     resize(800, 600);
 
@@ -22,16 +22,18 @@ GLWindow::GLWindow() : m_voxelData(VectorI3D(10, 21, 1))
 
     QObject::connect(this, SIGNAL(frameSwapped()), this, SLOT(onFrameSwapped()));
 
-    bool present = true;
-    for (int x = 0; x < 10; ++x) {
-        for (int y = 0; y < 21; ++y) {
-            if (present) {
-                m_voxelData.setDataAt(VectorI3D(x, y, 0), Voxel(1, 0.5, 0.001 * x * y, 0.2));
-            }
-            present = !present;
-            qDebug() << present;
-        }
-    }
+    m_voxelData = voxelsFromFile("C:\\screenshots_and_videos\\wanderer_hat.vd");
+
+//    bool present = true;
+//    for (int x = 0; x < 10; ++x) {
+//        for (int y = 0; y < 21; ++y) {
+//            if (present) {
+//                m_voxelData.setDataAt(VectorI3D(x, y, 0), Voxel(1, 0.5, 0.001 * x * y, 0.2));
+//            }
+//            present = !present;
+//            qDebug() << present;
+//        }
+//    }
 
 
     for (int x = 0; x < m_voxelData.dimensions().x(); ++x) {
@@ -39,19 +41,74 @@ GLWindow::GLWindow() : m_voxelData(VectorI3D(10, 21, 1))
             for (int z = 0; z < m_voxelData.dimensions().z(); ++z) {
                 qDebug() << x << y << z;
                 Voxel voxel = m_voxelData.dataAt(VectorI3D(x, y, z));
-                qDebug() << voxel.m_value << voxel.m_g;
+                qDebug() << voxel;
                 if (voxel.m_value != 0) {
                     addCube(QVector3D(x + 0.5, z + 0.5, y + 0.5), QVector3D(voxel.m_r, voxel.m_g, voxel.m_b));
                 }
             }
         }
     }
-//    addCube(QVector3D(5, 0, 0), QVector3D(1, 0, 0));
-//    addCube(QVector3D(-5, 0, 0), QVector3D(1, 0, 0));
-//    addCube(QVector3D(0, 5, 0), QVector3D(0, 1, 0));
-//    addCube(QVector3D(0, -5, 0), QVector3D(0, 1, 0));
-//    addCube(QVector3D(0, 0, 5), QVector3D(0, 0, 1));
-//    addCube(QVector3D(0, 0, -5), QVector3D(0, 0, 1));
+
+//    addTestCube(QVector3D(0, 0, 0));
+//    addTestCube(QVector3D(1, 0, 0));
+//    addTestCube(QVector3D(2, 0, 0));
+
+}
+
+void GLWindow::addTestCube(QVector3D center) {
+    // Back face
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, QVector3D(0.5, 0, 0));
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, QVector3D(0.5, 0, 0));
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, QVector3D(0.5, 0, 0));
+
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, QVector3D(0.5, 0, 0));
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, QVector3D(0.5, 0, 0));
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, QVector3D(0.5, 0, 0));
+
+    // Front face
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, QVector3D(1.0, 0, 0));
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, QVector3D(1.0, 0, 0));
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, QVector3D(1.0, 0, 0));
+
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, QVector3D(1.0, 0, 0));
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, QVector3D(1.0, 0, 0));
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, QVector3D(1.0, 0, 0));
+
+    // Left face
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, QVector3D(0, 0.5, 0));
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, QVector3D(0, 0.5, 0));
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, QVector3D(0, 0.5, 0));
+
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, QVector3D(0, 0.5, 0));
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, QVector3D(0, 0.5, 0));
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, QVector3D(0, 0.5, 0));
+
+    // Right face
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, QVector3D(0, 1, 0));
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, QVector3D(0, 1, 0));
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, QVector3D(0, 1, 0));
+
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, QVector3D(0, 1, 0));
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, QVector3D(0, 1, 0));
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, QVector3D(0, 1, 0));
+
+    // Bottom face
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, QVector3D(0, 0, 0.5));
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, QVector3D(0, 0, 0.5));
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, QVector3D(0, 0, 0.5));
+
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, QVector3D(0, 0, 0.5));
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, QVector3D(0, 0, 0.5));
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, QVector3D(0, 0, 0.5));
+
+    // Top face
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, QVector3D(0, 0, 1));
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, QVector3D(0, 0, 1));
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, QVector3D(0, 0, 1));
+
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, QVector3D(0, 0, 1));
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, QVector3D(0, 0, 1));
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, QVector3D(0, 0, 1));
 }
 
 GLWindow::~GLWindow() {
@@ -59,48 +116,63 @@ GLWindow::~GLWindow() {
 }
 
 void GLWindow::addCube(QVector3D center, QVector3D color) {
-    this->addVertex(QVector3D(-0.f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+    // Remember that Pitch = 0, Yaw = 0 means we're looking toward
+    // positive X with negative Z to the left, in OpenGL's coordinate system
 
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
-
-    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
-
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+    // Back face
     this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
     this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
-
-    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
-    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
     this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
 
     this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
     this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+
+    // Front face
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
     this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+
     this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
     this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
+
+    // Left face
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
+
+    // Right face
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
+
+
+    // Bottom face
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
+
+    this->addVertex(QVector3D(0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f, -0.5f, -0.5f), center, color);
+
+    // Top face
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f, -0.5f), center, color);
     this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
 
+    this->addVertex(QVector3D(-0.5f,  0.5f, -0.5f), center, color);
+    this->addVertex(QVector3D(-0.5f,  0.5f,  0.5f), center, color);
+    this->addVertex(QVector3D(0.5f,  0.5f,  0.5f), center, color);
 }
 
 void GLWindow::addVertex(QVector3D v, QVector3D translation, QVector3D color) {
@@ -162,6 +234,9 @@ void GLWindow::initializeGL() {
 
     f->glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(GLfloat), reinterpret_cast<void *>(3 * sizeof(GLfloat)));
     f->glEnableVertexAttribArray(1);
+
+    f->glEnable(GL_DEPTH_TEST);
+    f->glEnable(GL_CULL_FACE);
 
 
     m_vertexBuffer->release();

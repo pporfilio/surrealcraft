@@ -4,6 +4,7 @@
 
 #include "vectori3d.h"
 #include <QVector3D>
+#include <QFile>
 
 // Goal but may be inaccurate:
 // Origin front-bottom-left
@@ -15,7 +16,7 @@
 // has the correct array ordering.
 
 struct Voxel {
-   // used qint32 for compatibility with QDataStream
+   // Used qint32 to ensure consistent number of bytes when reading and writing from disk.
    Voxel(qint32 value, float r, float g, float b): m_value(value), m_r(r), m_g(g), m_b(b) {}
    Voxel(): m_value(0), m_r(0), m_g(0), m_b(0) {}
 
@@ -78,7 +79,8 @@ private:
 };
 
 VoxelData<Voxel> voxelsFromFile(QString path);
-
+void readBigEndian(QFile &file, char *destination, qint64 bytes);
+void writeBigEndian(QFile &file, char *source, qint64 bytes);
 
 #endif // VOXELDATA_H
 

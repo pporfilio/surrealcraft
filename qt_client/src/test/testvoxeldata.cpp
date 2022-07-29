@@ -57,12 +57,20 @@ void TestVoxelData::elementAccess() {
 void TestVoxelData::testReadVoxel() {
     QTemporaryFile file;
     if (file.open()) {
-        QDataStream out(&file);
-        out << (quint32)3 << (quint32)4 << (quint32)5;
-        for (int x = 0; x < 3; ++x) {
+        qint32 x = 3;
+        qint32 y = 4;
+        qint32 z = 5;
+        writeBigEndian(file, reinterpret_cast<char *>(&x), sizeof(x));
+        writeBigEndian(file, reinterpret_cast<char *>(&y), sizeof(y));
+        writeBigEndian(file, reinterpret_cast<char *>(&z), sizeof(z));
+        for (int z = 0; z < 5; ++z) {
             for (int y = 0; y < 4; ++y) {
-                for (int z = 0; z < 5; ++z) {
-                    out << (quint32)(x * y * z) << (float)(x / 3.0) << (float)(y / 4.0) << (float)(z / 5.0);
+                for (int x = 0; x < 3; ++x) {
+                    Voxel v(x * y * z, x / 3.0, y / 4.0, z / 5.0);
+                    writeBigEndian(file, reinterpret_cast<char *>(&v.m_value), sizeof(v.m_value));
+                    writeBigEndian(file, reinterpret_cast<char *>(&v.m_r), sizeof(v.m_r));
+                    writeBigEndian(file, reinterpret_cast<char *>(&v.m_g), sizeof(v.m_g));
+                    writeBigEndian(file, reinterpret_cast<char *>(&v.m_b), sizeof(v.m_b));
                 }
             }
         }

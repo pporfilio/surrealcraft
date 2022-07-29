@@ -3,7 +3,8 @@
 #include <QtMath>
 #include <QDebug>
 
-Camera::Camera()
+// Start out looking toward positive X (negative Z to the left)
+Camera::Camera(): m_position(0, 0, 0), m_pitchRad(0), m_yawRad(0)
 {
 
 }
