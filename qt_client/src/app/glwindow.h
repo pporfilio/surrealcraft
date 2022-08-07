@@ -4,6 +4,7 @@
 #include "inputstate.h"
 #include "camera.h"
 #include "voxeldata.h"
+#include "trianglemesh.h"
 
 #include <QOpenGLWindow>
 #include <QMatrix4x4>
@@ -43,6 +44,7 @@ protected:
     static QVector3D getCameraPositionDelta(const std::unique_ptr<Camera> &camera, const InputState &inputState, float tickDuration);
     static float getCameraYawDeltaDeg(const InputState &inputState, const InputState &previousInputState);
     static float getCameraPitchDeltaDeg(const InputState &inputState, const InputState &previousInputState);
+    static QList<GLfloat> glDataFromTriangles(QList<Triangle> triangles);
 
 private slots:
     void onFrameSwapped(void);
@@ -81,6 +83,7 @@ private:
     QMap<QString, QVector3D> m_uniformVectors;
 
     VoxelData<Voxel> m_voxelData;
+    // In Qt 6, QVector is just an alias for QList
     QList<GLfloat> m_triangleData;
 
     InputState m_currentInputState;
