@@ -1,10 +1,19 @@
 import numpy as np
 from PIL import Image
 import struct
+import argparse
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("image_file")
+    parser.add_argument("--output-file")
+    args = parser.parse_args()
+    return args
 
 if __name__ == "__main__":
-    # path = "/mnt/c/screenshots_and_videos/wanderer head shot.PNG"
-    path = "/mnt/c/screenshots_and_videos/wanderer head shot.PNG"
+    args = parse_args()
+    path = args.image_file
     image = Image.open(path)
     a = np.array(image)
 
@@ -21,10 +30,15 @@ if __name__ == "__main__":
         vd[i, :, :, 1:] = np.where(intensity3 > i, a[:, :, :3], 0)
         vd[i, :, :, :1] = np.where(intensity1 > i, 1, 0)
 
+    # Swap Z and Y axes because OpenGL has +Y up
+    print(vd.shape)
+    vd = np.swapaxes(vd, 0, 1)
+    print(vd.shape)
+
     # np.shape is backwards from our coordinate convention, = (z, y, x, voxel)
     # np.array[z][y][x][voxel]
 
-    with open("/mnt/c/screenshots_and_videos/wanderer_intensity.vd", "wb") as f:
+    with open(args.output_file, "wb") as f:
         # > is big-endian
         b = struct.pack(">iii", vd.shape[2], vd.shape[1], vd.shape[0])
         f.write(b)
