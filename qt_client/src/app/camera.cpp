@@ -34,12 +34,16 @@ void Camera::setPitchRad(float pitchRad) {
         return;
     }
     m_pitchRad = pitchRad;
-//    qDebug() << "Pitch set to " << m_pitchRad;
-    if (m_pitchRad < 0) {
-        m_pitchRad = 2 * M_PI + fmod(m_pitchRad, -1 * 2 * M_PI);
+//    qDebug() << "Requested m_pitchRad" << m_pitchRad  / M_PI;
+    float pitchMin = -(M_PI / 2) + 0.2;
+    float pitchMax = (M_PI / 2) - 0.2;
+    if (m_pitchRad < pitchMin) {
+//        qDebug() << "m_pitchRad < pitchMin";
+        m_pitchRad = pitchMin;
     }
-    if (m_pitchRad > 2 * M_PI) {
-        m_pitchRad = fmod(m_pitchRad, 2 * M_PI);
+    if (m_pitchRad > pitchMax) {
+//        qDebug() << "m_pitchRad > pitchMax";
+        m_pitchRad = pitchMax;
     }
 }
 
