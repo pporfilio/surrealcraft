@@ -11,6 +11,7 @@
 // Array indexing a[z][y][x]
 // Array rate of change a[slowest][middle][fastest]
 // Voxel coordinates (x, y, z)
+// But, OpenGL +Y is up
 
 // TODO: Add test that reading and writing the data to disk
 // has the correct array ordering.

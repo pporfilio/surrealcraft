@@ -22,7 +22,10 @@ GLWindow::GLWindow() : m_voxelData(VectorI3D())
 
     QObject::connect(this, SIGNAL(frameSwapped()), this, SLOT(onFrameSwapped()));
 
-    m_voxelData = voxelsFromFile("C:\\screenshots_and_videos\\wanderer_intensity.vd");
+    m_voxelData = voxelsFromFile("C:/Users/parker/Downloads/kaladesh_island.vd");
+
+    auto triangles = trianglesFromVoxelData(m_voxelData);
+    m_triangleData = glDataFromTriangles(triangles);
 
 //    bool present = true;
 //    for (int x = 0; x < 10; ++x) {
@@ -36,18 +39,18 @@ GLWindow::GLWindow() : m_voxelData(VectorI3D())
 //    }
 
 
-    for (int x = 0; x < m_voxelData.dimensions().x(); ++x) {
-        for (int y = 0; y < m_voxelData.dimensions().y(); ++y) {
-            for (int z = 0; z < m_voxelData.dimensions().z(); ++z) {
-//                qDebug() << x << y << z;
-                Voxel voxel = m_voxelData.dataAt(VectorI3D(x, y, z));
-//                qDebug() << voxel;
-                if (voxel.m_value != 0) {
-                    addCube(QVector3D(x + 0.5, z + 0.5, y + 0.5), QVector3D(voxel.m_r, voxel.m_g, voxel.m_b));
-                }
-            }
-        }
-    }
+//    for (int x = 0; x < m_voxelData.dimensions().x(); ++x) {
+//        for (int y = 0; y < m_voxelData.dimensions().y(); ++y) {
+//            for (int z = 0; z < m_voxelData.dimensions().z(); ++z) {
+////                qDebug() << x << y << z;
+//                Voxel voxel = m_voxelData.dataAt(VectorI3D(x, y, z));
+////                qDebug() << voxel;
+//                if (voxel.m_value != 0) {
+//                    addCube(QVector3D(x + 0.5, z + 0.5, y + 0.5), QVector3D(voxel.m_r, voxel.m_g, voxel.m_b));
+//                }
+//            }
+//        }
+//    }
 
 //    addTestCube(QVector3D(0, 0, 0));
 //    addTestCube(QVector3D(1, 0, 0));
@@ -297,6 +300,30 @@ float GLWindow::getCameraPitchDeltaDeg(const InputState &inputState,
     }
     // Negative one because y is bigger at the bottom than the top of the window.
     return -1 * (inputState.m_mouseDelta.y() - previousInputState.m_mouseDelta.y()) * rotateScale;
+}
+
+static void insertVector3D(QList<GLfloat> &buffer, qsizetype offset, QVector3D &v) {
+    buffer.replace(offset + 0, v.x());
+    buffer.replace(offset + 1, v.y());
+    buffer.replace(offset + 2, v.z());
+}
+
+QList<GLfloat> GLWindow::glDataFromTriangles(QList<Triangle> triangles) {
+    qsizetype numberOfTriangles = triangles.size();
+    qsizetype triangleElements = 3 * (3 /* vertex */ + 3 /* color */);
+
+    QList<GLfloat> result(triangles.size() * triangleElements);
+    for (qsizetype i = 0; i < numberOfTriangles; ++i) {
+        auto triangle = triangles.at(i);
+        insertVector3D(result, i * triangleElements + 0, triangle.p1);
+        insertVector3D(result, i * triangleElements + 3, triangle.color);
+        insertVector3D(result, i * triangleElements + 6, triangle.p2);
+        insertVector3D(result, i * triangleElements + 9, triangle.color);
+        insertVector3D(result, i * triangleElements + 12, triangle.p3);
+        insertVector3D(result, i * triangleElements + 15, triangle.color);
+    }
+
+    return result;
 }
 
 void GLWindow::paintGL() {
