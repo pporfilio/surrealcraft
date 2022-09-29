@@ -32,18 +32,11 @@ def write_obj(vertices, faces):
 
 if __name__ == "__main__":
     layers = []
-    half_layer_length = 20
+    layer_length = 80
     for profile_point_1, profile_point_2 in zip(profile_1, profile_2):
         current_layer = []
-        for th in np.linspace(0, math.pi, half_layer_length):
-            scale = lerp(0, math.pi, th, profile_point_1[0], profile_point_2[0])
-            current_layer.append(
-                (math.cos(th) * scale, math.sin(th) * scale, profile_point_1[1])
-            )
-        for th in np.linspace(math.pi, 2 * math.pi, half_layer_length):
-            scale = lerp(
-                math.pi, 2 * math.pi, th, profile_point_2[0], profile_point_1[0]
-            )
+        for th in np.linspace(0, 2 * math.pi, layer_length):
+            scale = lerp(-1, 1, math.cos(th), profile_point_1[0], profile_point_2[0])
             current_layer.append(
                 (math.cos(th) * scale, math.sin(th) * scale, profile_point_1[1])
             )
@@ -51,7 +44,6 @@ if __name__ == "__main__":
 
     vertices = [vertex for layer in layers for vertex in layer]
     faces = []
-    layer_length = 2 * half_layer_length
     for layer_index in range(len(layers) - 1):
         # objs are 1-indexed?
         for vertex_index in range(1, layer_length):
