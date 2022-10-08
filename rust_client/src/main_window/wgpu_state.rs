@@ -1,8 +1,13 @@
 use winit::window::Window;
 use winit::event::WindowEvent;
-use super::super::geometry::geometry::VERTICES;
-use super::super::geometry::geometry::Vertex;
+use super::buffers::VERTICES;
+use super::buffers::Vertex;
+use super::buffers::INDICES;
+use super::buffers::MatrixUniform;
 use wgpu::util::DeviceExt;
+
+// Probably wgpu_state should not import things from game
+use super::super::game::camera::Camera;
 
 pub struct WGPUState {
     pub surface: wgpu::Surface,
@@ -13,6 +18,14 @@ pub struct WGPUState {
     pub render_pipeline: wgpu::RenderPipeline,
     pub vertex_buffer: wgpu::Buffer,
     pub num_vertices: u32,
+    pub index_buffer: wgpu::Buffer,
+    pub num_indices: u32,
+    pub camera_uniform: MatrixUniform,
+    pub camera_buffer: wgpu::Buffer,
+    pub camera_bind_group: wgpu::BindGroup,
+
+    // probably these should not be part of WGPU state
+    pub camera: Camera,
 }
 
 // https://sotrh.github.io/learn-wgpu/beginner/tutorial2-surface/#first-some-housekeeping-state
@@ -74,6 +87,15 @@ impl WGPUState {
         );
         let num_vertices = VERTICES.len() as u32;
 
+        let index_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Index Buffer"),
+                contents: bytemuck::cast_slice(INDICES),
+                usage:wgpu::BufferUsages::INDEX,
+            }
+        );
+        let num_indices = INDICES.len() as u32;
+
         // Can be shortened to 
         // let shader = device.create_shader_module(include_wgsl!("shaders/shader.wgsl"));
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -81,9 +103,64 @@ impl WGPUState {
             source: wgpu::ShaderSource::Wgsl(include_str!("..\\shaders\\shader.wgsl").into()),
         });
 
+        let camera = Camera::new(
+            // position the camera one unit up and 2 units back
+            // +z is out of the screen
+            (0.0, 1.0, 2.0).into(),
+            // have it look at the origin
+            (0.0, 0.0, 0.0).into(),
+            // which way is "up"
+            cgmath::Vector3::unit_y(),
+            config.width as f32 / config.height as f32,
+            45.0,
+            0.1,
+            100.0,
+        );
+
+        let mut camera_uniform = MatrixUniform::new();
+        camera_uniform.update_matrix(camera.build_view_projection_matrix());
+
+        let camera_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Camera Buffer"),
+                contents: bytemuck::cast_slice(&[camera_uniform]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            }
+        );
+
+        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        // Indicates buffer will not change size (as it would for an array e.g.)
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ],
+            label: Some("camera_bind_group_layout"),
+        });
+
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &camera_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: camera_buffer.as_entire_binding(),
+                }
+            ],
+            label: Some("camera_bind_group"),
+        });
+
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[],
+            bind_group_layouts: &[
+                &camera_bind_group_layout,
+            ],
             push_constant_ranges: &[],
         });
 
@@ -128,9 +205,23 @@ impl WGPUState {
             },
             multiview: None,
         });
+         
 
         Self {
-            surface, device, queue, config, size, render_pipeline, vertex_buffer, num_vertices
+            surface, 
+            device, 
+            queue, 
+            config, 
+            size, 
+            render_pipeline, 
+            vertex_buffer, 
+            num_vertices,
+            index_buffer,
+            num_indices,
+            camera_uniform,
+            camera_buffer,
+            camera_bind_group,
+            camera,
         }
     }
 
@@ -183,10 +274,12 @@ impl WGPUState {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             // Draw something with 3 vertices and 1 instance.
             // This is where @builtin(vertex_index) comes from.
-            render_pass.draw(0..self.num_vertices, 0..1);
+            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
         }
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
