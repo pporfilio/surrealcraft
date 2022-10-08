@@ -1,6 +1,8 @@
-// lib.rs
 use winit::window::Window;
 use winit::event::WindowEvent;
+use super::super::geometry::geometry::VERTICES;
+use super::super::geometry::geometry::Vertex;
+use wgpu::util::DeviceExt;
 
 pub struct WGPUState {
     pub surface: wgpu::Surface,
@@ -9,6 +11,8 @@ pub struct WGPUState {
     pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     pub render_pipeline: wgpu::RenderPipeline,
+    pub vertex_buffer: wgpu::Buffer,
+    pub num_vertices: u32,
 }
 
 // https://sotrh.github.io/learn-wgpu/beginner/tutorial2-surface/#first-some-housekeeping-state
@@ -58,6 +62,18 @@ impl WGPUState {
         };
         surface.configure(&device, &config);
 
+        let vertex_buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some("Vertex Buffer"),
+                // create_buffer_init needs play u8 array. Bytemuck is a casting
+                // library and we added some traits to struct Vertex to make it work
+                // with bytemuck
+                contents: bytemuck::cast_slice(VERTICES),
+                usage: wgpu::BufferUsages::VERTEX,
+            }
+        );
+        let num_vertices = VERTICES.len() as u32;
+
         // Can be shortened to 
         // let shader = device.create_shader_module(include_wgsl!("shaders/shader.wgsl"));
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -77,9 +93,8 @@ impl WGPUState {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                // What vertices we want to pass to the vertex shader. In this example
-                // we're creating vertices in the shader for now.
-                buffers: &[], 
+                // What vertex format we want to pass to the vertex shader.
+                buffers: &[Vertex::desc()], 
             },
             // Wrapped in Some b/c fragment is technically optional
             fragment: Some(wgpu::FragmentState {
@@ -115,7 +130,7 @@ impl WGPUState {
         });
 
         Self {
-            surface, device, queue, config, size, render_pipeline,
+            surface, device, queue, config, size, render_pipeline, vertex_buffer, num_vertices
         }
     }
 
@@ -168,11 +183,11 @@ impl WGPUState {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             // Draw something with 3 vertices and 1 instance.
             // This is where @builtin(vertex_index) comes from.
-            render_pass.draw(0..3, 0..1);
+            render_pass.draw(0..self.num_vertices, 0..1);
         }
-
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
