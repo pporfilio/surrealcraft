@@ -7,6 +7,66 @@ use wgpu::util::DeviceExt;
 use cgmath::SquareMatrix;
 
 
+pub struct Matrix4UniformInfo {
+    pub buffer: wgpu::Buffer,
+    pub bind_group: wgpu::BindGroup,
+    pub bind_group_layout: wgpu::BindGroupLayout,
+    pub bind_group_number: u32,
+}
+
+impl Matrix4UniformInfo {
+    pub fn new(
+        device: &wgpu::Device,
+        initial_value: cgmath::Matrix4<f32>,
+        bind_group_number: u32,
+        buffer_label: &str,
+        bind_group_layout_label: &str,
+        bind_group_label: &str) -> Self {
+        let buffer = device.create_buffer_init(
+            &wgpu::util::BufferInitDescriptor {
+                label: Some(buffer_label),
+                contents: bytemuck::cast_slice(&[RawMatrix::new(initial_value)]),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            }
+        );
+
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        // Indicates buffer will not change size (as it would for an array e.g.)
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }
+            ],
+            label: Some(bind_group_layout_label),
+        });
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: buffer.as_entire_binding(),
+                }
+            ],
+            label: Some(bind_group_label),
+        });
+
+        Self {
+            buffer,
+            bind_group,
+            bind_group_layout,
+            bind_group_number,
+        }
+    }
+}
+
 pub struct WGPUState {
     pub surface: wgpu::Surface,
     pub device: wgpu::Device,
@@ -14,8 +74,7 @@ pub struct WGPUState {
     pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     pub render_pipeline: wgpu::RenderPipeline,
-    pub camera_buffer: wgpu::Buffer,
-    pub camera_bind_group: wgpu::BindGroup,
+    pub camera_uniform: Matrix4UniformInfo,
 }
 
 // https://sotrh.github.io/learn-wgpu/beginner/tutorial2-surface/#first-some-housekeeping-state
@@ -65,8 +124,6 @@ impl WGPUState {
         };
         surface.configure(&device, &config);
 
-
-
         // Can be shortened to 
         // let shader = device.create_shader_module(include_wgsl!("shaders/shader.wgsl"));
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -74,46 +131,19 @@ impl WGPUState {
             source: wgpu::ShaderSource::Wgsl(include_str!("..\\shaders\\shader.wgsl").into()),
         });
 
-        let camera_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Camera Buffer"),
-                contents: bytemuck::cast_slice(&[RawMatrix::new(cgmath::Matrix4::identity())]),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            }
+        let camera_uniform = Matrix4UniformInfo::new(
+            &device,
+            cgmath::Matrix4::identity(),
+            0,
+            "Camera Buffer",
+            "Camera Bind Group Layout",
+            "Camera Bind Group"
         );
-
-        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        // Indicates buffer will not change size (as it would for an array e.g.)
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }
-            ],
-            label: Some("camera_bind_group_layout"),
-        });
-
-        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &camera_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: camera_buffer.as_entire_binding(),
-                }
-            ],
-            label: Some("camera_bind_group"),
-        });
 
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
             bind_group_layouts: &[
-                &camera_bind_group_layout,
+                &camera_uniform.bind_group_layout,
             ],
             push_constant_ranges: &[],
         });
@@ -168,8 +198,7 @@ impl WGPUState {
             config, 
             size, 
             render_pipeline, 
-            camera_buffer,
-            camera_bind_group,
+            camera_uniform
         }
     }
 
@@ -188,10 +217,10 @@ impl WGPUState {
 
     pub fn update(&mut self, view_proj_matrix: cgmath::Matrix4<f32>) {
         // Apparently the usual way to do this is to create a separate buffer known
-        // as a "staging buffer" and then copy into the camera_buffer so that
-        // camera_buffer is only accessible by the gpu.
+        // as a "staging buffer" and then copy into the camera_uniform.buffer so that
+        // camera_uniform.buffer is only accessible by the gpu.
         self.queue.write_buffer(
-            &self.camera_buffer,
+            &self.camera_uniform.buffer,
             0,
             bytemuck::cast_slice(&[RawMatrix::new(view_proj_matrix)])
         );
@@ -229,7 +258,11 @@ impl WGPUState {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+            render_pass.set_bind_group(
+                self.camera_uniform.bind_group_number,
+                &self.camera_uniform.bind_group,
+                &[]
+            );
             render_pass.set_vertex_buffer(0, geometry.vertex_buffer.slice(..));
             render_pass.set_index_buffer(geometry.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             // Draw something with 3 vertices and 1 instance.
