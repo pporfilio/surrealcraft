@@ -49,21 +49,18 @@ pub const INDICES: &[u16] = &[
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-pub struct MatrixUniform {
-    // We can't use cgmath with bytemuck directly so we'll have
-    // to convert the Matrix4 into a 4x4 f32 array
+pub struct RawMatrix {
+    // We want to be able to pass a 4x4 matrix to a buffer on the gpu, and we use
+    // bytemuck::cast_slice to enable that, but bytemuck::cast_slice doesn't operate
+    // on cgmath::Matrix4, so this is a convenience struct so we can do
+    // bytemuck::cast_slice(&[RawMatrix::new(cgmath_matrix)])
     matrix: [[f32; 4]; 4],
 }
 
-impl MatrixUniform {
-    pub fn new() -> Self {
-        use cgmath::SquareMatrix;
+impl RawMatrix {
+    pub fn new(matrix: cgmath::Matrix4<f32>) -> Self {
         Self {
-            matrix: cgmath::Matrix4::identity().into(),
+            matrix: matrix.into(),
         }
-    }
-
-    pub fn update_matrix(&mut self, matrix: cgmath::Matrix4<f32>) {
-        self.matrix = matrix.into();
     }
 }

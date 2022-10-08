@@ -1,12 +1,11 @@
 use winit::window::Window;
 use winit::event::WindowEvent;
 use super::buffers::Vertex;
-use super::buffers::MatrixUniform;
 use super::buffers::GeometryBuffers;
+use super::buffers::RawMatrix;
 use wgpu::util::DeviceExt;
+use cgmath::SquareMatrix;
 
-// Probably wgpu_state should not import things from game
-use super::super::game::camera::Camera;
 
 pub struct WGPUState {
     pub surface: wgpu::Surface,
@@ -15,12 +14,8 @@ pub struct WGPUState {
     pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     pub render_pipeline: wgpu::RenderPipeline,
-    pub camera_uniform: MatrixUniform,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group: wgpu::BindGroup,
-
-    // probably these should not be part of WGPU state
-    pub camera: Camera,
 }
 
 // https://sotrh.github.io/learn-wgpu/beginner/tutorial2-surface/#first-some-housekeeping-state
@@ -79,27 +74,10 @@ impl WGPUState {
             source: wgpu::ShaderSource::Wgsl(include_str!("..\\shaders\\shader.wgsl").into()),
         });
 
-        let camera = Camera::new(
-            // position the camera one unit up and 2 units back
-            // +z is out of the screen
-            (0.0, 1.0, 2.0).into(),
-            // have it look at the origin
-            (0.0, 0.0, 0.0).into(),
-            // which way is "up"
-            cgmath::Vector3::unit_y(),
-            config.width as f32 / config.height as f32,
-            45.0,
-            0.1,
-            100.0,
-        );
-
-        let mut camera_uniform = MatrixUniform::new();
-        camera_uniform.update_matrix(camera.build_view_projection_matrix());
-
         let camera_buffer = device.create_buffer_init(
             &wgpu::util::BufferInitDescriptor {
                 label: Some("Camera Buffer"),
-                contents: bytemuck::cast_slice(&[camera_uniform]),
+                contents: bytemuck::cast_slice(&[RawMatrix::new(cgmath::Matrix4::identity())]),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             }
         );
@@ -190,10 +168,8 @@ impl WGPUState {
             config, 
             size, 
             render_pipeline, 
-            camera_uniform,
             camera_buffer,
             camera_bind_group,
-            camera,
         }
     }
 
@@ -210,8 +186,15 @@ impl WGPUState {
         false
     }
 
-    pub fn update(&mut self) {
-        // TODO
+    pub fn update(&mut self, view_proj_matrix: cgmath::Matrix4<f32>) {
+        // Apparently the usual way to do this is to create a separate buffer known
+        // as a "staging buffer" and then copy into the camera_buffer so that
+        // camera_buffer is only accessible by the gpu.
+        self.queue.write_buffer(
+            &self.camera_buffer,
+            0,
+            bytemuck::cast_slice(&[RawMatrix::new(view_proj_matrix)])
+        );
     }
 
     pub fn render(&mut self, geometry: &GeometryBuffers) -> Result<(), wgpu::SurfaceError> {

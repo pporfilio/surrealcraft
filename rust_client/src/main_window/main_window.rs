@@ -9,6 +9,8 @@ use super::buffers::INDICES;
 use super::buffers::GeometryBuffers;
 use wgpu::util::DeviceExt;
 
+use super::super::game::camera::Camera;
+
 
 pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
     let vertex_buffer = device.create_buffer_init(
@@ -38,6 +40,22 @@ pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
     }
 }
 
+pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
+    Camera::new(
+        // position the camera one unit up and 2 units back
+        // +z is out of the screen
+        (0.0, 1.0, 2.0).into(),
+        // have it look at the origin
+        (0.0, 0.0, 0.0).into(),
+        // which way is "up"
+        cgmath::Vector3::unit_y(),
+        config.width as f32 / config.height as f32,
+        45.0,
+        0.1,
+        100.0,
+    )
+}
+
 pub async fn run() {
     env_logger::init();
     let event_loop = EventLoop::new();
@@ -47,10 +65,12 @@ pub async fn run() {
 
     let geometry = initialize_geometry(&state.device);
 
+    let camera = initialize_camera(&state.config);
+
     event_loop.run(move |event, _, control_flow| { 
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
-                state.update();
+                state.update(camera.build_view_projection_matrix());
                 match state.render(&geometry) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
