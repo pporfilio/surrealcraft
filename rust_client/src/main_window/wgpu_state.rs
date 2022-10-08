@@ -1,9 +1,8 @@
 use winit::window::Window;
 use winit::event::WindowEvent;
-use super::buffers::VERTICES;
 use super::buffers::Vertex;
-use super::buffers::INDICES;
 use super::buffers::MatrixUniform;
+use super::buffers::GeometryBuffers;
 use wgpu::util::DeviceExt;
 
 // Probably wgpu_state should not import things from game
@@ -16,10 +15,6 @@ pub struct WGPUState {
     pub config: wgpu::SurfaceConfiguration,
     pub size: winit::dpi::PhysicalSize<u32>,
     pub render_pipeline: wgpu::RenderPipeline,
-    pub vertex_buffer: wgpu::Buffer,
-    pub num_vertices: u32,
-    pub index_buffer: wgpu::Buffer,
-    pub num_indices: u32,
     pub camera_uniform: MatrixUniform,
     pub camera_buffer: wgpu::Buffer,
     pub camera_bind_group: wgpu::BindGroup,
@@ -75,26 +70,7 @@ impl WGPUState {
         };
         surface.configure(&device, &config);
 
-        let vertex_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Vertex Buffer"),
-                // create_buffer_init needs play u8 array. Bytemuck is a casting
-                // library and we added some traits to struct Vertex to make it work
-                // with bytemuck
-                contents: bytemuck::cast_slice(VERTICES),
-                usage: wgpu::BufferUsages::VERTEX,
-            }
-        );
-        let num_vertices = VERTICES.len() as u32;
 
-        let index_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Index Buffer"),
-                contents: bytemuck::cast_slice(INDICES),
-                usage:wgpu::BufferUsages::INDEX,
-            }
-        );
-        let num_indices = INDICES.len() as u32;
 
         // Can be shortened to 
         // let shader = device.create_shader_module(include_wgsl!("shaders/shader.wgsl"));
@@ -214,10 +190,6 @@ impl WGPUState {
             config, 
             size, 
             render_pipeline, 
-            vertex_buffer, 
-            num_vertices,
-            index_buffer,
-            num_indices,
             camera_uniform,
             camera_buffer,
             camera_bind_group,
@@ -242,7 +214,7 @@ impl WGPUState {
         // TODO
     }
 
-    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, geometry: &GeometryBuffers) -> Result<(), wgpu::SurfaceError> {
         // Get texture to render to
         let output = self.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -275,11 +247,11 @@ impl WGPUState {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
-            render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-            render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.set_vertex_buffer(0, geometry.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(geometry.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             // Draw something with 3 vertices and 1 instance.
             // This is where @builtin(vertex_index) comes from.
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+            render_pass.draw_indexed(0..geometry.index_count, 0, 0..1);
         }
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));

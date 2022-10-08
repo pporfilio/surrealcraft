@@ -4,6 +4,39 @@ use winit::{
     window::WindowBuilder,
 };
 use super::wgpu_state::WGPUState;
+use super::buffers::VERTICES;
+use super::buffers::INDICES;
+use super::buffers::GeometryBuffers;
+use wgpu::util::DeviceExt;
+
+
+pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
+    let vertex_buffer = device.create_buffer_init(
+        &wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            // create_buffer_init needs plain u8 array. Bytemuck is a casting
+            // library and we added some traits to struct Vertex to make it work
+            // with bytemuck
+            contents: bytemuck::cast_slice(VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        }
+    );
+
+    let index_buffer = device.create_buffer_init(
+        &wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(INDICES),
+            usage:wgpu::BufferUsages::INDEX,
+        }
+    );
+
+    GeometryBuffers {
+        vertex_buffer,
+        index_buffer,
+        vertex_count: VERTICES.len() as u32,
+        index_count: INDICES.len() as u32,
+    }
+}
 
 pub async fn run() {
     env_logger::init();
@@ -12,11 +45,13 @@ pub async fn run() {
 
     let mut state = WGPUState::new(&window).await;
 
+    let geometry = initialize_geometry(&state.device);
+
     event_loop.run(move |event, _, control_flow| { 
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 state.update();
-                match state.render() {
+                match state.render(&geometry) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => state.resize(state.size),

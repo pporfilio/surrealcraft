@@ -1,3 +1,10 @@
+pub struct GeometryBuffers {
+    pub vertex_buffer: wgpu::Buffer,
+    pub index_buffer: wgpu::Buffer,
+    pub vertex_count: u32,
+    pub index_count: u32,
+}
+
 // bytemuck traits say that this can be converted to bytes and can be used
 // with std::mem::zeroed()
 // #[repr(C)] is for compatibility with shaders
