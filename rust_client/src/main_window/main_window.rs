@@ -41,11 +41,9 @@ pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
     Camera::new(
         // position the camera one unit up and 2 units back
         // +z is out of the screen
-        (0.0, 1.0, 2.0).into(),
-        // have it look at the origin
         (0.0, 0.0, 0.0).into(),
-        // which way is "up"
-        cgmath::Vector3::unit_y(),
+        0.0,
+        0.0,
         config.width as f32 / config.height as f32,
         45.0,
         0.1,
