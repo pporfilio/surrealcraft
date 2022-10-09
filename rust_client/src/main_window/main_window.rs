@@ -8,6 +8,7 @@ use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
+    window,
     window::WindowBuilder,
 };
 
@@ -51,7 +52,7 @@ pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
     )
 }
 
-pub fn handle_input(event: &WindowEvent, input_state: &mut InputState) {
+pub fn handle_input(event: &WindowEvent, window: &window::Window, input_state: &mut InputState) {
     // From sleeping in render() with wgpu::PresentMode::Fifo, it seems like key press
     // events get queued up and processed when control returns to the event loop.
     // It seems like we get at most 1 mouse event per frame with whatever location
@@ -90,6 +91,30 @@ pub fn handle_input(event: &WindowEvent, input_state: &mut InputState) {
                 }
                 ElementState::Released => {
                     input_state.set_mouse_button_released(button);
+                }
+            }
+        }
+        WindowEvent::CursorMoved { position, .. } => {
+            let (w, h): (f32, f32) = window
+                .inner_size()
+                .to_logical::<f32>(window.scale_factor())
+                .into();
+            let delta_x = position.x as f32 - w / 2.0;
+            let delta_y = position.y as f32 - h / 2.0;
+            println!("w: {:?} h: {:?}", w, h);
+            if delta_x == 0.0 && delta_y == 0.0 {
+                println!("Cursor still centered");
+            } else {
+                input_state.add_mouse_delta(delta_x, delta_y);
+                let scale = window.scale_factor() as f32;
+                println!("scale factor: {:?}", window.scale_factor());
+                let new_x = w * scale / 2.0;
+                let new_y = h * scale / 2.0;
+                println!("new width: {:?} new_height: {:?}", new_x, new_y);
+                if let Err(err) =
+                    window.set_cursor_position(winit::dpi::PhysicalPosition::new(new_x, new_y))
+                {
+                    println!("Error centering cursor position: {:?}", err);
                 }
             }
         }
@@ -162,7 +187,7 @@ pub async fn run() {
                         ..
                     } => *control_flow = ControlFlow::Exit,
                     _ => {
-                        handle_input(event, &mut input_state);
+                        handle_input(event, &window, &mut input_state);
                     }
                 }
             }
