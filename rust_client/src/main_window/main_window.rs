@@ -1,37 +1,33 @@
+use super::buffers::GeometryBuffers;
+use super::buffers::INDICES;
+use super::buffers::VERTICES;
+use super::input_state::InputState;
+use super::wgpu_state::WGPUState;
+use std::time::Instant;
+use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
     window::WindowBuilder,
 };
-use super::wgpu_state::WGPUState;
-use super::buffers::VERTICES;
-use super::buffers::INDICES;
-use super::buffers::GeometryBuffers;
-use wgpu::util::DeviceExt;
-use std::time::Instant;
 
 use super::super::game::camera::Camera;
 
-
 pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
-    let vertex_buffer = device.create_buffer_init(
-        &wgpu::util::BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            // create_buffer_init needs plain u8 array. Bytemuck is a casting
-            // library and we added some traits to struct Vertex to make it work
-            // with bytemuck
-            contents: bytemuck::cast_slice(VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
-        }
-    );
+    let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        // create_buffer_init needs plain u8 array. Bytemuck is a casting
+        // library and we added some traits to struct Vertex to make it work
+        // with bytemuck
+        contents: bytemuck::cast_slice(VERTICES),
+        usage: wgpu::BufferUsages::VERTEX,
+    });
 
-    let index_buffer = device.create_buffer_init(
-        &wgpu::util::BufferInitDescriptor {
-            label: Some("Index Buffer"),
-            contents: bytemuck::cast_slice(INDICES),
-            usage:wgpu::BufferUsages::INDEX,
-        }
-    );
+    let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Index Buffer"),
+        contents: bytemuck::cast_slice(INDICES),
+        usage: wgpu::BufferUsages::INDEX,
+    });
 
     GeometryBuffers {
         vertex_buffer,
@@ -57,7 +53,7 @@ pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
     )
 }
 
-pub fn handle_input(event: &WindowEvent) -> bool {
+pub fn handle_input(event: &WindowEvent, input_state: &mut InputState) {
     // From sleeping in render() with wgpu::PresentMode::Fifo, it seems like key press
     // events get queued up and processed when control returns to the event loop.
     // It seems like we get at most 1 mouse event per frame with whatever location
@@ -66,9 +62,41 @@ pub fn handle_input(event: &WindowEvent) -> bool {
     // triggers a key release event, even if key is still pressed
     // Mouse release can be missed: alt-tab to other window the mouse release doesn't
     // get sent unless window is re-focused before the mouse is released.
-    // We do get Focused(bool) event when window focus changes 
+    // We do get Focused(bool) event when window focus changes
     println!("{:?}", event);
-    false
+    match event {
+        WindowEvent::KeyboardInput {
+            input:
+                KeyboardInput {
+                    virtual_keycode: Some(virtual_keycode),
+                    state,
+                    ..
+                },
+            ..
+        } => {
+            println!("Matched key code {:?}", virtual_keycode);
+            match state {
+                ElementState::Pressed => {
+                    input_state.set_key_pressed(virtual_keycode);
+                }
+                ElementState::Released => {
+                    input_state.set_key_released(virtual_keycode);
+                }
+            }
+        }
+        WindowEvent::MouseInput { state, button, .. } => {
+            println!("Matched MouseInput {:?} {:?}", button, state);
+            match state {
+                ElementState::Pressed => {
+                    input_state.set_mouse_button_presssed(button);
+                }
+                ElementState::Released => {
+                    input_state.set_mouse_button_released(button);
+                }
+            }
+        }
+        _ => (),
+    }
 }
 
 pub async fn run() {
@@ -80,16 +108,20 @@ pub async fn run() {
 
     let geometry = initialize_geometry(&wgpu_state.device);
 
-    let camera = initialize_camera(&wgpu_state.config);
+    let mut camera = initialize_camera(&wgpu_state.config);
+
+    let mut input_state = InputState::new();
 
     let mut prev_loop_instant = Instant::now();
 
-    event_loop.run(move |event, _, control_flow| { 
+    event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
-                
                 let current_loop_instant = Instant::now();
-                println!("{:?}", current_loop_instant.checked_duration_since(prev_loop_instant));
+                println!(
+                    "{:?}",
+                    current_loop_instant.checked_duration_since(prev_loop_instant)
+                );
                 prev_loop_instant = current_loop_instant;
 
                 // TODO: update camera aspect ratio in case wgpu_state.size changed
@@ -111,7 +143,7 @@ pub async fn run() {
             Event::WindowEvent {
                 ref event,
                 window_id,
-            } if window_id == window.id() => if !handle_input(event) {
+            } if window_id == window.id() => {
                 match event {
                     WindowEvent::Resized(physical_size) => {
                         wgpu_state.resize(*physical_size);
@@ -131,9 +163,11 @@ pub async fn run() {
                             },
                         ..
                     } => *control_flow = ControlFlow::Exit,
-                    _ => {}
+                    _ => {
+                        handle_input(event, &mut input_state);
+                    }
                 }
-            },
+            }
             _ => {}
         }
     });
