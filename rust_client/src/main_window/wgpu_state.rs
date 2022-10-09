@@ -1,13 +1,12 @@
-use winit::window::Window;
-use super::buffers::Vertex;
 use super::buffers::GeometryBuffers;
 use super::buffers::RawMatrix;
-use wgpu::util::DeviceExt;
+use super::buffers::Vertex;
 use cgmath::SquareMatrix;
+use wgpu::util::DeviceExt;
+use winit::window::Window;
 
-use std::time::{Duration, Instant};
 use std::thread::sleep;
-
+use std::time::{Duration, Instant};
 
 pub struct Matrix4UniformInfo {
     pub buffer: wgpu::Buffer,
@@ -23,40 +22,35 @@ impl Matrix4UniformInfo {
         bind_group_number: u32,
         buffer_label: &str,
         bind_group_layout_label: &str,
-        bind_group_label: &str) -> Self {
-        let buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some(buffer_label),
-                contents: bytemuck::cast_slice(&[RawMatrix::new(initial_value)]),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            }
-        );
+        bind_group_label: &str,
+    ) -> Self {
+        let buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some(buffer_label),
+            contents: bytemuck::cast_slice(&[RawMatrix::new(initial_value)]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
 
         let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Uniform,
-                        // Indicates buffer will not change size (as it would for an array e.g.)
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }
-            ],
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    // Indicates buffer will not change size (as it would for an array e.g.)
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
             label: Some(bind_group_layout_label),
         });
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout: &bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: buffer.as_entire_binding(),
-                }
-            ],
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: buffer.as_entire_binding(),
+            }],
             label: Some(bind_group_label),
         });
 
@@ -91,36 +85,40 @@ impl WGPUState {
         let surface = unsafe { instance.create_surface(window) };
 
         // adapter is a handle to our graphics card.
-        let adapter = instance.request_adapter(
-            &wgpu::RequestAdapterOptions {
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
                 // Options are HighPerformance and LowPower. Unclear which default() picks.
                 power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: Some(&surface),
                 force_fallback_adapter: false,
-            },
-        ).await.unwrap();
+            })
+            .await
+            .unwrap();
 
-        let (device, queue) = adapter.request_device(
-            &wgpu::DeviceDescriptor {
-                features: wgpu::Features::empty(),
-                // TODO: WASM
-                // WebGL doesn't support all of wgpu's features, so if
-                // we're building for the web we'll have to disable some.
-                limits: if cfg!(target_arch = "wasm32") {
-                    wgpu::Limits::downlevel_webgl2_defaults()
-                } else {
-                    wgpu::Limits::default()
+        let (device, queue) = adapter
+            .request_device(
+                &wgpu::DeviceDescriptor {
+                    features: wgpu::Features::empty(),
+                    // TODO: WASM
+                    // WebGL doesn't support all of wgpu's features, so if
+                    // we're building for the web we'll have to disable some.
+                    limits: if cfg!(target_arch = "wasm32") {
+                        wgpu::Limits::downlevel_webgl2_defaults()
+                    } else {
+                        wgpu::Limits::default()
+                    },
+                    label: None,
                 },
-                label: None,
-            },
-            None, // Trace path
-        ).await.unwrap();
+                None, // Trace path
+            )
+            .await
+            .unwrap();
 
         let config = wgpu::SurfaceConfiguration {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT, // Draw to screen
             format: surface.get_supported_formats(&adapter)[0],
             width: if size.width < 1 { 1 } else { size.width },
-            height: if size.height < 1 { 1 } else {size.height },
+            height: if size.height < 1 { 1 } else { size.height },
             // Cap display rate at display's framerate. Effectively VSync.
             // wgpu::PresentMode::Mailbox will not block but screen updates
             // will still not tear.
@@ -128,7 +126,7 @@ impl WGPUState {
         };
         surface.configure(&device, &config);
 
-        // Can be shortened to 
+        // Can be shortened to
         // let shader = device.create_shader_module(include_wgsl!("shaders/shader.wgsl"));
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
@@ -141,16 +139,15 @@ impl WGPUState {
             0,
             "Camera Buffer",
             "Camera Bind Group Layout",
-            "Camera Bind Group"
+            "Camera Bind Group",
         );
 
-        let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[
-                &camera_uniform.bind_group_layout,
-            ],
-            push_constant_ranges: &[],
-        });
+        let render_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Render Pipeline Layout"),
+                bind_group_layouts: &[&camera_uniform.bind_group_layout],
+                push_constant_ranges: &[],
+            });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("render Pipeline"),
@@ -159,16 +156,16 @@ impl WGPUState {
                 module: &shader,
                 entry_point: "vs_main",
                 // What vertex format we want to pass to the vertex shader.
-                buffers: &[Vertex::desc()], 
+                buffers: &[Vertex::desc()],
             },
             // Wrapped in Some b/c fragment is technically optional
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
                 entry_point: "fs_main",
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: config.format, // our surface's format
+                    format: config.format,                  // our surface's format
                     blend: Some(wgpu::BlendState::REPLACE), // new color data should replace old color data
-                    write_mask: wgpu::ColorWrites::ALL, // Write all red, green, blue, and alpha
+                    write_mask: wgpu::ColorWrites::ALL,     // Write all red, green, blue, and alpha
                 })],
             }),
             // How to interpret our vertices when converting them to triangles
@@ -193,16 +190,15 @@ impl WGPUState {
             },
             multiview: None,
         });
-         
 
         Self {
-            surface, 
-            device, 
-            queue, 
-            config, 
-            size, 
-            render_pipeline, 
-            camera_uniform
+            surface,
+            device,
+            queue,
+            config,
+            size,
+            render_pipeline,
+            camera_uniform,
         }
     }
 
@@ -222,41 +218,46 @@ impl WGPUState {
         self.queue.write_buffer(
             &self.camera_uniform.buffer,
             0,
-            bytemuck::cast_slice(&[RawMatrix::new(view_proj_matrix)])
+            bytemuck::cast_slice(&[RawMatrix::new(view_proj_matrix)]),
         );
     }
 
     pub fn render(&mut self, geometry: &GeometryBuffers) -> Result<(), wgpu::SurfaceError> {
-
-        sleep(Duration::new(2, 0));
+        //sleep(Duration::new(2, 0));
 
         // Get texture to render to
         let output = self.surface.get_current_texture()?;
-        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let view = output
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
         // Encoder is a command buffer that we use to send commands to the GPU
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("Render Encoder"),
-        });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
 
-        {  // Mutably borrows _render_pass until the end of this block. 
+        {
+            // Mutably borrows _render_pass until the end of this block.
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[
-                // This is what @location(0) in the fragment shader targets    
-                Some(wgpu::RenderPassColorAttachment {
-                    view: &view,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 0.1,
-                            g: 0.2,
-                            b: 0.3,
-                            a: 1.0,
-                        }),
-                        store: true,
-                    },
-                })],
+                    // This is what @location(0) in the fragment shader targets
+                    Some(wgpu::RenderPassColorAttachment {
+                        view: &view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Clear(wgpu::Color {
+                                r: 0.1,
+                                g: 0.2,
+                                b: 0.3,
+                                a: 1.0,
+                            }),
+                            store: true,
+                        },
+                    }),
+                ],
                 depth_stencil_attachment: None,
             });
 
@@ -264,10 +265,11 @@ impl WGPUState {
             render_pass.set_bind_group(
                 self.camera_uniform.bind_group_number,
                 &self.camera_uniform.bind_group,
-                &[]
+                &[],
             );
             render_pass.set_vertex_buffer(0, geometry.vertex_buffer.slice(..));
-            render_pass.set_index_buffer(geometry.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass
+                .set_index_buffer(geometry.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             // Draw something with 3 vertices and 1 instance.
             // This is where @builtin(vertex_index) comes from.
             render_pass.draw_indexed(0..geometry.index_count, 0, 0..1);
@@ -278,5 +280,4 @@ impl WGPUState {
 
         Ok(())
     }
-
 }

@@ -16,21 +16,28 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
     0.0, 0.0, 0.5, 1.0,
 );
 
-// The coordinate system in Wgpu is based on DirectX, and Metal's coordinate systems. 
-// That means that in normalized device coordinates (opens new window)the x axis and 
+// The coordinate system in Wgpu is based on DirectX, and Metal's coordinate systems.
+// That means that in normalized device coordinates (opens new window)the x axis and
 // y axis are in the range of -1.0 to +1.0, and the z axis is 0.0 to +1.0. The cgmath
 // crate (as well as most game math crates) is built for OpenGL's coordinate system.
 impl Camera {
-    pub fn new(eye: cgmath::Point3<f32>,
-               target: cgmath::Point3<f32>,
-               up: cgmath::Vector3<f32>,
-               aspect: f32,
-               fovy: f32,
-               znear: f32,
-               zfar: f32,
-            ) -> Self {
+    pub fn new(
+        eye: cgmath::Point3<f32>,
+        target: cgmath::Point3<f32>,
+        up: cgmath::Vector3<f32>,
+        aspect: f32,
+        fovy: f32,
+        znear: f32,
+        zfar: f32,
+    ) -> Self {
         Self {
-            eye, target, up, aspect, fovy, znear, zfar
+            eye,
+            target,
+            up,
+            aspect,
+            fovy,
+            znear,
+            zfar,
         }
     }
 
