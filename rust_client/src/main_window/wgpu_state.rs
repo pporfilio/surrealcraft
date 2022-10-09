@@ -1,10 +1,12 @@
 use winit::window::Window;
-use winit::event::WindowEvent;
 use super::buffers::Vertex;
 use super::buffers::GeometryBuffers;
 use super::buffers::RawMatrix;
 use wgpu::util::DeviceExt;
 use cgmath::SquareMatrix;
+
+use std::time::{Duration, Instant};
+use std::thread::sleep;
 
 
 pub struct Matrix4UniformInfo {
@@ -120,6 +122,8 @@ impl WGPUState {
             width: if size.width < 1 { 1 } else { size.width },
             height: if size.height < 1 { 1 } else {size.height },
             // Cap display rate at display's framerate. Effectively VSync.
+            // wgpu::PresentMode::Mailbox will not block but screen updates
+            // will still not tear.
             present_mode: wgpu::PresentMode::Fifo,
         };
         surface.configure(&device, &config);
@@ -211,10 +215,6 @@ impl WGPUState {
         }
     }
 
-    pub fn input(&mut self, event: &WindowEvent) -> bool {
-        false
-    }
-
     pub fn update(&mut self, view_proj_matrix: cgmath::Matrix4<f32>) {
         // Apparently the usual way to do this is to create a separate buffer known
         // as a "staging buffer" and then copy into the camera_uniform.buffer so that
@@ -227,6 +227,9 @@ impl WGPUState {
     }
 
     pub fn render(&mut self, geometry: &GeometryBuffers) -> Result<(), wgpu::SurfaceError> {
+
+        sleep(Duration::new(2, 0));
+
         // Get texture to render to
         let output = self.surface.get_current_texture()?;
         let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
