@@ -4,10 +4,6 @@ pub struct Camera {
     position: cgmath::Vector3<f32>,
     pitch_rad: f32,
     yaw_rad: f32,
-
-    // eye: cgmath::Point3<f32>,
-    // target: cgmath::Point3<f32>,
-    // up: cgmath::Vector3<f32>,
     aspect: f32,
     fovy: f32,
     znear: f32,
@@ -59,7 +55,7 @@ impl Camera {
             fovy,
             znear,
             zfar,
-            pitch_min: (PI / 2.0) + 0.2,
+            pitch_min: -1.0 * (PI / 2.0) + 0.2,
             pitch_max: (PI / 2.0) - 0.2,
         }
     }

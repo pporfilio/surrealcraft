@@ -29,7 +29,7 @@ impl InputState {
         }
     }
 
-    pub fn key_presssed(&self, key: &VirtualKeyCode) -> bool {
+    pub fn key_pressed(&self, key: &VirtualKeyCode) -> bool {
         self.keys_pressed.get(key).copied().unwrap_or(false)
     }
 
@@ -56,8 +56,16 @@ impl InputState {
         self.mouse_buttons_pressed.insert(*button, false);
     }
 
+    pub fn mouse_delta(&self) -> cgmath::Vector2<f32> {
+        self.mouse_delta
+    }
+
+    pub fn mouse_position_set(&self) -> bool {
+        self.mouse_position_set
+    }
+
     pub fn add_mouse_delta(&mut self, delta_x: f32, delta_y: f32) {
-        println!("{:?} {:?}", delta_x, delta_y);
+        // println!("{:?} {:?}", delta_x, delta_y);
         self.mouse_delta.x = delta_x;
         self.mouse_delta.y = delta_y;
         self.mouse_position_set = true;

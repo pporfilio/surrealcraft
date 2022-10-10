@@ -3,6 +3,7 @@ use super::buffers::INDICES;
 use super::buffers::VERTICES;
 use super::input_state::InputState;
 use super::wgpu_state::WGPUState;
+use cgmath::InnerSpace;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
 use winit::{
@@ -62,7 +63,8 @@ pub fn handle_input(event: &WindowEvent, window: &window::Window, input_state: &
     // Mouse release can be missed: alt-tab to other window the mouse release doesn't
     // get sent unless window is re-focused before the mouse is released.
     // We do get Focused(bool) event when window focus changes
-    println!("{:?}", event);
+
+    // println!("Event: {:?}", event);
     match event {
         WindowEvent::KeyboardInput {
             input:
@@ -73,7 +75,7 @@ pub fn handle_input(event: &WindowEvent, window: &window::Window, input_state: &
                 },
             ..
         } => {
-            println!("Matched key code {:?}", virtual_keycode);
+            // println!("Matched key code {:?}", virtual_keycode);
             match state {
                 ElementState::Pressed => {
                     input_state.set_key_pressed(virtual_keycode);
@@ -84,7 +86,7 @@ pub fn handle_input(event: &WindowEvent, window: &window::Window, input_state: &
             }
         }
         WindowEvent::MouseInput { state, button, .. } => {
-            println!("Matched MouseInput {:?} {:?}", button, state);
+            // println!("Matched MouseInput {:?} {:?}", button, state);
             match state {
                 ElementState::Pressed => {
                     input_state.set_mouse_button_presssed(button);
@@ -99,18 +101,19 @@ pub fn handle_input(event: &WindowEvent, window: &window::Window, input_state: &
                 .inner_size()
                 .to_logical::<f32>(window.scale_factor())
                 .into();
-            let delta_x = position.x as f32 - w / 2.0;
-            let delta_y = position.y as f32 - h / 2.0;
-            println!("w: {:?} h: {:?}", w, h);
+            let scale = window.scale_factor() as f32;
+            let delta_x = position.x as f32 / scale - w / 2.0;
+            let delta_y = position.y as f32 / scale - h / 2.0;
+            // println!("w: {:?} h: {:?}", w, h);
             if delta_x == 0.0 && delta_y == 0.0 {
                 println!("Cursor still centered");
             } else {
+                // println!("Delta Y: {:?}", delta_y);
                 input_state.add_mouse_delta(delta_x, delta_y);
-                let scale = window.scale_factor() as f32;
-                println!("scale factor: {:?}", window.scale_factor());
+                // println!("scale factor: {:?}", window.scale_factor());
                 let new_x = w * scale / 2.0;
                 let new_y = h * scale / 2.0;
-                println!("new width: {:?} new_height: {:?}", new_x, new_y);
+                // println!("new width: {:?} new_height: {:?}", new_x, new_y);
                 if let Err(err) =
                     window.set_cursor_position(winit::dpi::PhysicalPosition::new(new_x, new_y))
                 {
@@ -120,6 +123,69 @@ pub fn handle_input(event: &WindowEvent, window: &window::Window, input_state: &
         }
         _ => (),
     }
+}
+
+pub fn get_camera_position_delta(
+    camera: &Camera,
+    input_state: &InputState,
+    delta_s: f32,
+) -> cgmath::Vector3<f32> {
+    let mut delta_forward: f32 = 0.0;
+    let mut delta_up: f32 = 0.0;
+    let mut delta_right: f32 = 0.0;
+    if input_state.key_pressed(&VirtualKeyCode::W) || input_state.key_pressed(&VirtualKeyCode::Up) {
+        delta_forward += delta_s;
+    }
+    if input_state.key_pressed(&VirtualKeyCode::S) || input_state.key_pressed(&VirtualKeyCode::Down)
+    {
+        delta_forward -= delta_s;
+    }
+    if input_state.key_pressed(&VirtualKeyCode::D)
+        || input_state.key_pressed(&VirtualKeyCode::Right)
+    {
+        delta_right += delta_s;
+    }
+    if input_state.key_pressed(&VirtualKeyCode::A) || input_state.key_pressed(&VirtualKeyCode::Left)
+    {
+        delta_right -= delta_s;
+    }
+    if input_state.key_pressed(&VirtualKeyCode::Q) {
+        delta_up += delta_s;
+    }
+    if input_state.key_pressed(&VirtualKeyCode::E) {
+        delta_up -= delta_s;
+    }
+
+    delta_forward * camera.look_vector()
+        + delta_up * camera.up_vector()
+        + delta_right * camera.look_vector().cross(camera.up_vector()).normalize()
+}
+
+pub fn get_camera_yaw_deg_delta(input_state: &InputState) -> f32 {
+    if input_state.mouse_position_set() {
+        return input_state.mouse_delta().x;
+    } else {
+        return 0.0;
+    }
+}
+
+pub fn get_camera_pitch_deg_delta(input_state: &InputState) -> f32 {
+    if input_state.mouse_position_set() {
+        return -1.0 * input_state.mouse_delta().y;
+    } else {
+        return 0.0;
+    }
+}
+
+pub fn update_game_state(input_state: &mut InputState, camera: &mut Camera, delta_s: f32) {
+    let movement_scale: f32 = 1.0;
+    let rotation_scale: f32 = 0.3;
+    camera.add_position_delta(
+        movement_scale * get_camera_position_delta(camera, input_state, delta_s),
+    );
+    camera.add_pitch_deg(rotation_scale * get_camera_pitch_deg_delta(input_state));
+    camera.add_yaw_deg(rotation_scale * get_camera_yaw_deg_delta(input_state));
+    input_state.clear_mouse_delta();
 }
 
 pub async fn run() {
@@ -141,11 +207,21 @@ pub async fn run() {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
                 let current_loop_instant = Instant::now();
-                println!(
-                    "{:?}",
-                    current_loop_instant.checked_duration_since(prev_loop_instant)
-                );
+                let delta_s = current_loop_instant
+                    .saturating_duration_since(prev_loop_instant)
+                    .as_secs_f32();
+                // println!("{:?}", delta_s);
                 prev_loop_instant = current_loop_instant;
+
+                update_game_state(&mut input_state, &mut camera, delta_s);
+
+                // println!("Camera: {:?} {:?}", camera.position(), camera.look_vector());
+                use super::super::game::camera::rad_to_deg;
+                // println!(
+                //     "Camera: pitch: {:?} yaw: {:?}",
+                //     rad_to_deg(camera.pitch_rad()),
+                //     rad_to_deg(camera.yaw_rad())
+                // );
 
                 // TODO: update camera aspect ratio in case wgpu_state.size changed
                 wgpu_state.update(camera.build_view_projection_matrix());
@@ -156,7 +232,7 @@ pub async fn run() {
                     // The system is out of memory, we should probably quit
                     Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
                     // All other errors(Outdated, Timeout) should be resolved by the next frame
-                    Err(e) => eprintln!("{:?}", e),
+                    Err(e) => eprintln!("Error: {:?}", e),
                 }
             }
             Event::MainEventsCleared => {
