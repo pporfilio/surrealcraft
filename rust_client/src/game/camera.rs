@@ -141,3 +141,60 @@ impl Camera {
         return OPENGL_TO_WGPU_MATRIX * proj * view;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_eq_eps_f32(a: f32, b: f32, eps: f32) {
+        assert!((a - b).abs() < eps);
+    }
+
+    #[test]
+    fn set_pitch_rad() {
+        let mut c = Camera::new(
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            0.0,
+            0.0,
+            640.0 / 480.0,
+            45.0,
+            0.1,
+            100.0,
+        );
+
+        // Ensure that values greater than pitch_max are set to pitch_max, less than
+        // pitch_min are set to pitch_min, and inbetween are not affected.
+        c.set_pitch_rad(c.pitch_max + 2.0);
+        assert_eq!(c.pitch_rad(), c.pitch_max);
+
+        c.set_pitch_rad(c.pitch_min - 2.0);
+        assert_eq!(c.pitch_rad(), c.pitch_min);
+
+        let allowed_pitch = (c.pitch_max + c.pitch_min) / 2.0;
+        c.set_pitch_rad(allowed_pitch);
+        assert_eq!(c.pitch_rad(), allowed_pitch);
+    }
+
+    #[test]
+    fn set_yaw_rad() {
+        let mut c = Camera::new(
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            0.0,
+            0.0,
+            640.0 / 480.0,
+            45.0,
+            0.1,
+            100.0,
+        );
+
+        // Ensure that yaw values wrap from 2pi to 0 and from 0 to 2pi
+        c.set_yaw_rad(2.0 * PI + 2.0);
+        assert_eq_eps_f32(c.yaw_rad(), 2.0, 0.00001);
+
+        c.set_yaw_rad(-2.0);
+        assert_eq!(c.yaw_rad(), 2.0 * PI - 2.0);
+
+        c.set_yaw_rad(PI);
+        assert_eq!(c.yaw_rad(), PI);
+    }
+}
