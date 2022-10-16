@@ -1,3 +1,6 @@
+use std::fs::File;
+use std::io::prelude::*;
+
 #[derive(Copy, Clone, Debug)]
 pub struct Voxel {
     value: i32,
@@ -16,6 +19,34 @@ pub struct VoxelData<T: Copy> {
     data: Vec<T>,
     dimensions: cgmath::Vector3<u16>,
     voxel_count: u64,
+}
+
+fn read_i32(file: &mut File) -> Option<i32> {
+    let mut buf: [u8; 4] = [0; 4];
+
+    let read_result = file.read(&mut buf);
+    let _ = match read_result {
+        Ok(read_count) => read_count,
+        Err(error) => {
+            println!("Error reading i32 from file: {:?}", error);
+            return None;
+        }
+    };
+    Some(i32::from_be_bytes(buf))
+}
+
+fn read_f32(file: &mut File) -> Option<f32> {
+    let mut buf: [u8; 4] = [0; 4];
+
+    let read_result = file.read(&mut buf);
+    let _ = match read_result {
+        Ok(read_count) => read_count,
+        Err(error) => {
+            println!("Error reading f32 from file: {:?}", error);
+            return None;
+        }
+    };
+    Some(f32::from_be_bytes(buf))
 }
 
 impl<T: Copy + std::fmt::Debug> VoxelData<T> {
@@ -78,6 +109,58 @@ impl<T: Copy + std::fmt::Debug> VoxelData<T> {
     }
 }
 
+pub fn voxel_data_from_file(path: &str) -> Option<VoxelData<Voxel>> {
+    let file_open_result = File::open(path);
+    let mut file = match file_open_result {
+        Ok(file) => file,
+        Err(error) => {
+            println!("Error reading file {:?}: {:?}", path, error);
+            return None;
+        }
+    };
+    let mut buf: Vec<u8> = Vec::with_capacity(4);
+    buf.resize(4, 0);
+
+    let mut dimensions: cgmath::Vector3<u16> = cgmath::Vector3::new(0, 0, 0);
+
+    for i in 0..3 {
+        let tmp = read_i32(&mut file)?;
+        if tmp > u16::MAX as i32 {
+            println!(
+                "Got dimension {:?} of {:?}, which is bigger than the max {:?}",
+                i,
+                tmp,
+                u16::MAX
+            );
+        }
+        dimensions[i] = tmp as u16;
+    }
+
+    let mut vd = VoxelData::new(
+        dimensions,
+        Voxel {
+            value: 0,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
+        },
+    )?;
+
+    for z in 0..dimensions.z {
+        for y in 0..dimensions.y {
+            for x in 0..dimensions.x {
+                let value = read_i32(&mut file)?;
+                let r = read_f32(&mut file)?;
+                let g = read_f32(&mut file)?;
+                let b = read_f32(&mut file)?;
+                vd.set_data_at(cgmath::Vector3::new(x, y, z), Voxel::new(value, r, g, b));
+            }
+        }
+    }
+
+    Some(vd)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -115,5 +198,52 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn read_voxel_data() -> std::io::Result<()> {
+        // Have to handle errors from file operations. This is why the function
+        // returns std::io::Result<()>, returns Ok(()) when everything goes well,
+        // and has a ? after every file operation.
+        // Also requires including use std::io::prelude::*;
+        {
+            let mut file = File::create("test.vd").unwrap_or_else(|error| {
+                panic!("ARG");
+            });
+            let x: i32 = 3;
+            let y: i32 = 4;
+            let z: i32 = 5;
+            file.write(&x.to_be_bytes())?;
+            file.write(&y.to_be_bytes())?;
+            file.write(&z.to_be_bytes())?;
+            for z in 0..5 {
+                for y in 0..4 {
+                    for x in 0..3 {
+                        file.write(&((x * y * z) as i32).to_be_bytes())?;
+                        file.write(&(x as f32 / 3.0).to_be_bytes())?;
+                        file.write(&(y as f32 / 4.0).to_be_bytes())?;
+                        file.write(&(z as f32 / 5.0).to_be_bytes())?;
+                    }
+                }
+            }
+        }
+
+        let vd: VoxelData<Voxel> = voxel_data_from_file("test.vd").unwrap_or_else(|| {
+            panic!("Error reading file!");
+        });
+
+        for x in 0..3 {
+            for y in 0..4 {
+                for z in 0..5 {
+                    let v = vd.data_at(cgmath::Vector3::new(x, y, z));
+                    assert_eq!(v.value, x as i32 * y as i32 * z as i32);
+                    assert_eq!(v.r, x as f32 / 3.0);
+                    assert_eq!(v.g, y as f32 / 4.0);
+                    assert_eq!(v.b, z as f32 / 5.0);
+                }
+            }
+        }
+
+        Ok(())
     }
 }
