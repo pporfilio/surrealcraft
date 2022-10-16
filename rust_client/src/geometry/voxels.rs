@@ -3,10 +3,10 @@ use std::io::prelude::*;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Voxel {
-    value: i32,
-    r: f32,
-    g: f32,
-    b: f32,
+    pub value: i32,
+    pub r: f32,
+    pub g: f32,
+    pub b: f32,
 }
 
 impl Voxel {

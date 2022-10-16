@@ -55,8 +55,8 @@ impl Camera {
             fovy,
             znear,
             zfar,
-            pitch_min: -1.0 * (PI / 2.0) + 0.2,
-            pitch_max: (PI / 2.0) - 0.2,
+            pitch_min: -1.0 * (PI / 2.0) + 0.4,
+            pitch_max: (PI / 2.0) - 0.4,
         }
     }
 
@@ -100,6 +100,7 @@ impl Camera {
         if self.yaw_rad > 2.0 * PI {
             self.yaw_rad = fmod(self.yaw_rad, 2.0 * PI);
         }
+        println!("yaw rad: {:?}", self.yaw_rad);
     }
 
     pub fn set_yaw_deg(&mut self, yaw_deg: f32) {

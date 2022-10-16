@@ -174,6 +174,7 @@ impl WGPUState {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
+                // cull_mode: None,
                 cull_mode: Some(wgpu::Face::Back),
                 // Setting this to anything other than Fill requires Features::NON_FILL_POLYGON_MODE
                 polygon_mode: wgpu::PolygonMode::Fill,
@@ -269,7 +270,7 @@ impl WGPUState {
             );
             render_pass.set_vertex_buffer(0, geometry.vertex_buffer.slice(..));
             render_pass
-                .set_index_buffer(geometry.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                .set_index_buffer(geometry.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
             // Draw something with 3 vertices and 1 instance.
             // This is where @builtin(vertex_index) comes from.
             render_pass.draw_indexed(0..geometry.index_count, 0, 0..1);

@@ -1,9 +1,14 @@
+use crate::geometry::voxels::voxel_data_from_file;
+
+use super::super::geometry::geometry::*;
+use super::super::geometry::voxels::*;
 use super::buffers::GeometryBuffers;
 use super::buffers::INDICES;
 use super::buffers::VERTICES;
 use super::input_state::InputState;
 use super::wgpu_state::WGPUState;
 use cgmath::InnerSpace;
+// use std::iter::Zip;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
 use winit::{
@@ -16,26 +21,65 @@ use winit::{
 use super::super::game::camera::Camera;
 
 pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
+    // let vd =
+    //     voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
+    //         .unwrap();
+
+    let mut vd = VoxelData::new(
+        cgmath::Vector3 { x: 2, y: 2, z: 2 },
+        Voxel::new(1, 0.8, 0.8, 0.4),
+    )
+    .unwrap();
+
+    for x in 0..2 {
+        for y in 0..2 {
+            for z in 0..2 {
+                vd.set_data_at(
+                    cgmath::Vector3::new(x, y, z),
+                    Voxel::new(1, x as f32 * 0.5, y as f32 * 0.5, z as f32 * 0.5),
+                );
+            }
+        }
+    }
+
+    let tm = triangles_from_voxel_data(&vd);
+
+    let mut vertex_data: Vec<f32> = Vec::new();
+    for (position, color) in tm.vertices.iter().zip(tm.colors) {
+        vertex_data.push(position.x);
+        vertex_data.push(position.y);
+        vertex_data.push(position.z);
+        vertex_data.push(color.x);
+        vertex_data.push(color.y);
+        vertex_data.push(color.z);
+    }
+
     let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Vertex Buffer"),
         // create_buffer_init needs plain u8 array. Bytemuck is a casting
         // library and we added some traits to struct Vertex to make it work
         // with bytemuck
-        contents: bytemuck::cast_slice(VERTICES),
+        contents: bytemuck::cast_slice(&vertex_data[..]),
         usage: wgpu::BufferUsages::VERTEX,
     });
 
     let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Index Buffer"),
-        contents: bytemuck::cast_slice(INDICES),
+        contents: bytemuck::cast_slice(&tm.indices[..]),
         usage: wgpu::BufferUsages::INDEX,
     });
+
+    // println!("indices: {:?}", tm.indices.len());
+    // println!("indices: {:?}", tm.indices);
+    // println!("vertices: {:?}", tm.vertices.len());
+    // println!("vertex_data: {:?}", vertex_data.len());
+    // println!("vertex_data: {:?}", vertex_data);
 
     GeometryBuffers {
         vertex_buffer,
         index_buffer,
-        vertex_count: VERTICES.len() as u32,
-        index_count: INDICES.len() as u32,
+        vertex_count: tm.vertices.len() as u32,
+        index_count: tm.indices.len() as u32,
     }
 }
 
@@ -49,7 +93,7 @@ pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
         config.width as f32 / config.height as f32,
         45.0,
         0.1,
-        100.0,
+        10000.0,
     )
 }
 
@@ -106,7 +150,7 @@ pub fn handle_input(event: &WindowEvent, window: &window::Window, input_state: &
             let delta_y = position.y as f32 / scale - h / 2.0;
             // println!("w: {:?} h: {:?}", w, h);
             if delta_x == 0.0 && delta_y == 0.0 {
-                println!("Cursor still centered");
+                // println!("Cursor still centered");
             } else {
                 // println!("Delta Y: {:?}", delta_y);
                 input_state.add_mouse_delta(delta_x, delta_y);
@@ -178,8 +222,8 @@ pub fn get_camera_pitch_deg_delta(input_state: &InputState) -> f32 {
 }
 
 pub fn update_game_state(input_state: &mut InputState, camera: &mut Camera, delta_s: f32) {
-    let movement_scale: f32 = 1.0;
-    let rotation_scale: f32 = 0.3;
+    let movement_scale: f32 = 10.0;
+    let rotation_scale: f32 = 0.2;
     camera.add_position_delta(
         movement_scale * get_camera_position_delta(camera, input_state, delta_s),
     );
