@@ -100,7 +100,6 @@ impl Camera {
         if self.yaw_rad > 2.0 * PI {
             self.yaw_rad = fmod(self.yaw_rad, 2.0 * PI);
         }
-        println!("yaw rad: {:?}", self.yaw_rad);
     }
 
     pub fn set_yaw_deg(&mut self, yaw_deg: f32) {
@@ -125,7 +124,7 @@ impl Camera {
 
     pub fn look_vector(&self) -> cgmath::Vector3<f32> {
         cgmath::Vector3::new(
-            f32::cos(self.yaw_rad() * f32::cos(self.pitch_rad())),
+            f32::cos(self.yaw_rad()) * f32::cos(self.pitch_rad()),
             f32::sin(self.pitch_rad()),
             f32::sin(self.yaw_rad()) * f32::cos(self.pitch_rad()),
         )
