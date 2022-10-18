@@ -35,20 +35,6 @@ fn read_i32(file: &mut File) -> Option<i32> {
     Some(i32::from_be_bytes(buf))
 }
 
-fn read_f32(file: &mut File) -> Option<f32> {
-    let mut buf: [u8; 4] = [0; 4];
-
-    let read_result = file.read(&mut buf);
-    let _ = match read_result {
-        Ok(read_count) => read_count,
-        Err(error) => {
-            println!("Error reading f32 from file: {:?}", error);
-            return None;
-        }
-    };
-    Some(f32::from_be_bytes(buf))
-}
-
 impl<T: Copy + std::fmt::Debug> VoxelData<T> {
     pub fn new(dimensions: cgmath::Vector3<u16>, initial_value: T) -> Option<Self> {
         // Out of memory handling is complicated and not worth it at this point
@@ -136,6 +122,19 @@ pub fn voxel_data_from_file(path: &str) -> Option<VoxelData<Voxel>> {
         dimensions[i] = tmp as u16;
     }
 
+    let bytes_to_read = 16 * dimensions.x as usize * dimensions.y as usize * dimensions.z as usize;
+    let mut voxel_data_buffer: Vec<u8> = Vec::with_capacity(bytes_to_read);
+    voxel_data_buffer.resize(bytes_to_read, 0);
+
+    let read_result = file.read(&mut voxel_data_buffer);
+    let _ = match read_result {
+        Ok(read_count) => read_count,
+        Err(error) => {
+            println!("Error reading voxel data file: {:?}", error);
+            return None;
+        }
+    };
+
     let mut vd = VoxelData::new(
         dimensions,
         Voxel {
@@ -146,14 +145,21 @@ pub fn voxel_data_from_file(path: &str) -> Option<VoxelData<Voxel>> {
         },
     )?;
 
+    let mut count = 0;
+    let mut buf: [u8; 4] = [0; 4];
     for z in 0..dimensions.z {
         for y in 0..dimensions.y {
             for x in 0..dimensions.x {
-                let value = read_i32(&mut file)?;
-                let r = read_f32(&mut file)?;
-                let g = read_f32(&mut file)?;
-                let b = read_f32(&mut file)?;
+                buf.copy_from_slice(&voxel_data_buffer[count..count + 4]);
+                let value = i32::from_be_bytes(buf);
+                buf.copy_from_slice(&voxel_data_buffer[count + 4..count + 8]);
+                let r = f32::from_be_bytes(buf);
+                buf.copy_from_slice(&voxel_data_buffer[count + 8..count + 12]);
+                let g = f32::from_be_bytes(buf);
+                buf.copy_from_slice(&voxel_data_buffer[count + 12..count + 16]);
+                let b = f32::from_be_bytes(buf);
                 vd.set_data_at(cgmath::Vector3::new(x, y, z), Voxel::new(value, r, g, b));
+                count += 16;
             }
         }
     }
