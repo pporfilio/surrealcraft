@@ -7,12 +7,26 @@ pub struct TriangleMesh {
 }
 
 impl TriangleMesh {
-    pub fn new() -> Self {
+    pub fn new(vertex_count_hint: usize, index_count_hint: usize) -> Self {
+        let mut vertices: Vec<cgmath::Vector3<f32>> = Vec::new();
+        let mut indices = Vec::new();
+        let mut colors: Vec<cgmath::Vector3<f32>> = Vec::new();
+
+        vertices.reserve(vertex_count_hint);
+        colors.reserve(vertex_count_hint);
+        indices.reserve(index_count_hint);
+
         Self {
-            vertices: Vec::new(),
-            indices: Vec::new(),
-            colors: Vec::new(),
+            vertices,
+            indices,
+            colors,
         }
+    }
+
+    pub fn trim(&mut self) {
+        self.vertices.shrink_to_fit();
+        self.indices.shrink_to_fit();
+        self.colors.shrink_to_fit();
     }
 }
 
@@ -96,8 +110,48 @@ pub fn add_voxel(
     triangle_mesh.indices.push(start_index + 0);    
 }
 
+// No array size
+// Took 586.52ms
+// Took 606.5143ms
+// Took 615.2295ms
+
+// Vec::resize()
+// Took 820.3226ms
+// Took 878.7217ms
+// Took 871.9675ms
+
+// Vec::reserve(), voxel count / 2
+// Took 497.0261ms
+// Took 446.4625ms
+// Took 450.804ms
+
+// Vec::reserve(), voxel count
+// So this suggests that if I had slightly more than voxel count / 2,
+// then I guess the last doubling and copy took the bulk of the time.
+// So it looks like guessing but going low doesn't really help.
+// Took 292.3084ms
+// Took 314.831ms
+// Took 258.3519ms
+
+// Vec::reserve() voxel count, then Vec::shrink_to_fit() each array
+// This way we avoid any copies but also only temporarily use the extra memory
+// Took 283.9025ms
+// Took 299.5491ms
+// Took 287.8983ms
+// And wow, this takes 2.3 _seconds_ in non-release build.
+
 pub fn triangles_from_voxel_data(voxel_data: &VoxelData<Voxel>) -> TriangleMesh {
-    let mut tm = TriangleMesh::new();
+    use std::time::Instant;
+    let start = Instant::now();
+
+    let voxel_guess = (voxel_data.dimensions().x as usize
+        * voxel_data.dimensions().y as usize
+        * voxel_data.dimensions().z as usize);
+
+    let vertex_guess = 8 * voxel_guess;
+    let index_guess = 36 * voxel_guess;
+
+    let mut tm = TriangleMesh::new(vertex_guess, index_guess);
 
     let vd_x = voxel_data.dimensions().x;
     let vd_y = voxel_data.dimensions().y;
@@ -116,6 +170,12 @@ pub fn triangles_from_voxel_data(voxel_data: &VoxelData<Voxel>) -> TriangleMesh 
             }
         }
     }
+
+    tm.trim();
+
+    let stop = Instant::now();
+    let delta_s = stop.saturating_duration_since(start);
+    println!("Took {:?}", delta_s);
 
     tm
 }

@@ -41,7 +41,7 @@ impl<T: Copy + std::fmt::Debug> VoxelData<T> {
         // https://www.crowdstrike.com/blog/dealing-with-out-of-memory-conditions-in-rust/
 
         let voxel_count = dimensions.x as u64 * dimensions.y as u64 * dimensions.z as u64;
-        println!("Createing VoxelData with {:?} voxels", voxel_count);
+        println!("Creating VoxelData with {:?} voxels", voxel_count);
 
         if voxel_count > usize::MAX as u64 || voxel_count > 2 * 1000 * 1000 * 1000 {
             return None;
