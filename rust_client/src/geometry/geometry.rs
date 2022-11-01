@@ -30,6 +30,12 @@ impl TriangleMesh {
     }
 }
 
+pub fn coordinate_probe_mesh(scale: f32, color: cgmath::Vector3<f32>) -> TriangleMesh {
+    let mut tm = TriangleMesh::new(200, 200);
+
+    tm
+}
+
 pub const CUBE_SCALE: f32 = 0.5;
 
 #[rustfmt::skip]

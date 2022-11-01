@@ -1,4 +1,5 @@
 use super::super::geometry::geometry::*;
+use super::super::geometry::obj::*;
 use super::super::geometry::voxels::*;
 use super::buffers::GeometryBuffers;
 use super::buffers::INDICES;
@@ -23,9 +24,15 @@ pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
     //     voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
     //         .unwrap();
 
-    let vd = voxel_test_geometry();
+    // let vd = voxel_test_geometry();
 
-    let tm = triangles_from_voxel_data(&vd);
+    // let tm = triangles_from_voxel_data(&vd);
+
+    let tm = read_obj(
+        "C:\\Users\\parker\\Downloads\\coordinate_probe.obj",
+        cgmath::Vector3::new(0.2, 0.3, 0.4),
+    )
+    .unwrap();
 
     let mut vertex_data: Vec<f32> = Vec::new();
     for (position, color) in tm.vertices.iter().zip(tm.colors) {
@@ -51,12 +58,6 @@ pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
         contents: bytemuck::cast_slice(&tm.indices[..]),
         usage: wgpu::BufferUsages::INDEX,
     });
-
-    // println!("indices: {:?}", tm.indices.len());
-    // println!("indices: {:?}", tm.indices);
-    // println!("vertices: {:?}", tm.vertices.len());
-    // println!("vertex_data: {:?}", vertex_data.len());
-    // println!("vertex_data: {:?}", vertex_data);
 
     GeometryBuffers {
         vertex_buffer,
