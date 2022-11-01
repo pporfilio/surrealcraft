@@ -95,6 +95,27 @@ impl<T: Copy + std::fmt::Debug> VoxelData<T> {
     }
 }
 
+pub fn voxel_test_geometry() -> VoxelData<Voxel> {
+    let mut vd = VoxelData::new(
+        cgmath::Vector3 { x: 2, y: 2, z: 2 },
+        Voxel::new(1, 0.8, 0.8, 0.4),
+    )
+    .unwrap();
+
+    for x in 0..2 {
+        for y in 0..2 {
+            for z in 0..2 {
+                vd.set_data_at(
+                    cgmath::Vector3::new(x, y, z),
+                    Voxel::new(1, x as f32 * 0.5, y as f32 * 0.5, z as f32 * 0.5),
+                );
+            }
+        }
+    }
+
+    vd
+}
+
 pub fn voxel_data_from_file(path: &str) -> Option<VoxelData<Voxel>> {
     let file_open_result = File::open(path);
     let mut file = match file_open_result {

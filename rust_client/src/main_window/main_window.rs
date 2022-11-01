@@ -1,5 +1,3 @@
-use crate::geometry::voxels::voxel_data_from_file;
-
 use super::super::geometry::geometry::*;
 use super::super::geometry::voxels::*;
 use super::buffers::GeometryBuffers;
@@ -21,26 +19,11 @@ use winit::{
 use super::super::game::camera::Camera;
 
 pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
-    let vd =
-        voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
-            .unwrap();
+    // let vd =
+    //     voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
+    //         .unwrap();
 
-    // let mut vd = VoxelData::new(
-    //     cgmath::Vector3 { x: 2, y: 2, z: 2 },
-    //     Voxel::new(1, 0.8, 0.8, 0.4),
-    // )
-    // .unwrap();
-
-    // for x in 0..2 {
-    //     for y in 0..2 {
-    //         for z in 0..2 {
-    //             vd.set_data_at(
-    //                 cgmath::Vector3::new(x, y, z),
-    //                 Voxel::new(1, x as f32 * 0.5, y as f32 * 0.5, z as f32 * 0.5),
-    //             );
-    //         }
-    //     }
-    // }
+    let vd = voxel_test_geometry();
 
     let tm = triangles_from_voxel_data(&vd);
 
