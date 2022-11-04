@@ -129,7 +129,7 @@ impl Camera {
 
         cgmath::Vector3::new(
             f32::cos(self.yaw_rad()) * f32::cos(self.pitch_rad()),
-            -1.0 * (f32::sin(self.yaw_rad()) * f32::cos(self.pitch_rad())),
+            f32::sin(self.yaw_rad()) * f32::cos(self.pitch_rad()),
             f32::sin(self.pitch_rad()),
         )
     }
@@ -139,31 +139,8 @@ impl Camera {
     }
 
     pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
-        let pos = self.position();
-        let lv = self.look_vector();
-        let uv = self.up_vector();
-
-        // Something funky is going on here where when the camera is looking toward
-        // positive x: geometry is rendered correctly in screen space (+x is forward,
-        // +y is to the left, +z is up) but when I rotate or move the camera to look at
-        // +y geometry, the look vector is (0, 0, -1) and when I rotate the camera to
-        // look at +z geometry, the look vector is (0, 1, 0).
-        // So I _think_ look_to_rh interprets the vectors I pass to it differently than
-        // I do. Since the geometry looked correct, I didn't want to change what I passed
-        // to look_to_rh. So instead I changed how the look and up vector are calculated
-        // to give the results I expect in geometry-space, and undo those changes here to
-        // get whatever look_to_rh expects.
-        // I think this is effectively just another linear transformation that could be
-        // baked in to OPENGL_TO_WGPU_MATRIX, but I'm tired and I don't understand
-        // the coordinate systems wgpu and cgmath use well enough.
-        // I think this encapsulates all the coordinate transforms in build_view_projection_matrix
-        // and external to the camera if I compare the camera look or position to my geometry
-        // mesh representation it will work correctly.
-        let view = cgmath::Matrix4::look_to_rh(
-            cgmath::Point3::new(pos.x, pos.z, -pos.y),
-            cgmath::Vector3::new(lv.x, lv.z, -lv.y),
-            cgmath::Vector3::new(uv.x, uv.z, -uv.y),
-        );
+        let view =
+            cgmath::Matrix4::look_to_rh(self.position(), self.look_vector(), self.up_vector());
         let proj = cgmath::perspective(cgmath::Deg(self.fovy), self.aspect, self.znear, self.zfar);
         return OPENGL_TO_WGPU_MATRIX * proj * view;
     }

@@ -192,7 +192,9 @@ pub fn get_camera_position_delta(
 
 pub fn get_camera_yaw_deg_delta(input_state: &InputState) -> f32 {
     if input_state.mouse_position_set() {
-        return input_state.mouse_delta().x;
+        // Yaw increases as the mouse moves left, because our coordinate frame is
+        // X foward, Y to the left.
+        return -1.0 * input_state.mouse_delta().x;
     } else {
         return 0.0;
     }

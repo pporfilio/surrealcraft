@@ -3,6 +3,8 @@ use std::fs::File;
 use std::io::prelude::*;
 
 pub fn read_obj(path: &str, color: cgmath::Vector3<f32>) -> Result<TriangleMesh, std::io::Error> {
+    // For some reason when exporting from Blender to get the obj coordinates to match
+    // the coordinates in the Blender viewport, I had to use "Y Forward, Z Up".
     let file_open_result = File::open(path);
     let mut file = match file_open_result {
         Ok(file) => file,
