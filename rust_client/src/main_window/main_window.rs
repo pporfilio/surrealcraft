@@ -250,7 +250,13 @@ pub async fn run() {
 
                 update_game_state(&mut input_state, &mut camera, delta_s);
 
-                // println!("Camera: {:?} {:?}", camera.position(), camera.look_vector());
+                // println!(
+                //     "Camera yaw: {:?} pitch: {:?} position: {:?} look: {:?}",
+                //     rad_to_deg(camera.yaw_rad()),
+                //     rad_to_deg(camera.pitch_rad()),
+                //     camera.position(),
+                //     camera.look_vector()
+                // );
                 // use super::super::game::camera::rad_to_deg;
                 // println!(
                 //     "Camera: pitch: {:?} yaw: {:?}",
