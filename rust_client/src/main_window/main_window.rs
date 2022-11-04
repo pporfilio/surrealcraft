@@ -6,6 +6,7 @@ use super::buffers::INDICES;
 use super::buffers::VERTICES;
 use super::input_state::InputState;
 use super::wgpu_state::WGPUState;
+use crate::game::camera::rad_to_deg;
 use cgmath::InnerSpace;
 // use std::iter::Zip;
 use std::time::Instant;

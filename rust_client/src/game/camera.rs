@@ -22,11 +22,11 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
 );
 
 pub fn deg_to_rad(in_deg: f32) -> f32 {
-    (in_deg * 2.0 * PI) / 180.0
+    (in_deg * 2.0 * PI) / 360.0
 }
 
 pub fn rad_to_deg(in_rad: f32) -> f32 {
-    in_rad * 180.0 / (2.0 * PI)
+    in_rad * 360.0 / (2.0 * PI)
 }
 
 pub fn fmod(num: f32, denom: f32) -> f32 {
