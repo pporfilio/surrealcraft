@@ -30,8 +30,27 @@ impl TriangleMesh {
     }
 }
 
-pub fn coordinate_probe_mesh(scale: f32, color: cgmath::Vector3<f32>) -> TriangleMesh {
+pub fn collision_mesh_1() -> TriangleMesh {
+    let color = cgmath::Vector3::new(115.0 / 255.0, 147.0 / 255.0, 179.0 / 255.0);
     let mut tm = TriangleMesh::new(200, 200);
+
+    // Square at x = 5 facing toward origin
+    tm.vertices.push(cgmath::Vector3::new(5.1, 1.0, 0.5));
+    tm.vertices.push(cgmath::Vector3::new(5.1, 1.0, -0.5));
+    tm.vertices.push(cgmath::Vector3::new(4.9, -1.0, 0.5));
+    tm.vertices.push(cgmath::Vector3::new(4.9, -1.0, -0.5));
+
+    tm.indices.push(0);
+    tm.indices.push(1);
+    tm.indices.push(3);
+
+    tm.indices.push(3);
+    tm.indices.push(2);
+    tm.indices.push(0);
+
+    for _ in 0..4 {
+        tm.colors.push(color);
+    }
 
     tm
 }

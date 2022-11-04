@@ -29,11 +29,13 @@ pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
 
     // let tm = triangles_from_voxel_data(&vd);
 
-    let tm = read_obj(
-        "C:\\Users\\parker\\Downloads\\coordinate_probe.obj",
-        cgmath::Vector3::new(0.2, 0.3, 0.4),
-    )
-    .unwrap();
+    // let tm = read_obj(
+    //     "C:\\Users\\parker\\Downloads\\coordinate_probe.obj",
+    //     cgmath::Vector3::new(0.2, 0.3, 0.4),
+    // )
+    // .unwrap();
+
+    let tm = collision_mesh_1();
 
     let mut vertex_data: Vec<f32> = Vec::new();
     for (position, color) in tm.vertices.iter().zip(tm.colors) {
