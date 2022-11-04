@@ -215,6 +215,12 @@ pub fn update_game_state(input_state: &mut InputState, camera: &mut Camera, delt
     camera.add_pitch_deg(rotation_scale * get_camera_pitch_deg_delta(input_state));
     camera.add_yaw_deg(rotation_scale * get_camera_yaw_deg_delta(input_state));
     input_state.clear_mouse_delta();
+
+    if input_state.key_pressed(&VirtualKeyCode::R) {
+        camera.set_position(cgmath::Vector3::new(0.0, 0.0, 0.0));
+        camera.set_pitch_deg(0.0);
+        camera.set_yaw_deg(0.0);
+    }
 }
 
 pub async fn run() {
