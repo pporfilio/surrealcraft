@@ -1,3 +1,5 @@
+use cgmath::{num_traits::sign, InnerSpace};
+
 use super::voxels::{Voxel, VoxelData};
 
 pub struct TriangleMesh {
@@ -49,6 +51,25 @@ pub fn collision_mesh_1() -> TriangleMesh {
     tm.indices.push(0);
 
     for _ in 0..4 {
+        tm.colors.push(color);
+    }
+
+    tm
+}
+
+pub fn collision_mesh_2() -> TriangleMesh {
+    let color = cgmath::Vector3::new(115.0 / 255.0, 147.0 / 255.0, 179.0 / 255.0);
+    let mut tm = TriangleMesh::new(200, 200);
+
+    tm.vertices.push(cgmath::Vector3::new(-5.0, 0.0, 0.0));
+    tm.vertices.push(cgmath::Vector3::new(7.0, -5.0, 0.0));
+    tm.vertices.push(cgmath::Vector3::new(7.0, 5.0, 0.0));
+
+    tm.indices.push(0);
+    tm.indices.push(1);
+    tm.indices.push(2);
+
+    for _ in 0..3 {
         tm.colors.push(color);
     }
 
@@ -203,4 +224,162 @@ pub fn triangles_from_voxel_data(voxel_data: &VoxelData<Voxel>) -> TriangleMesh 
     println!("Took {:?}", delta_s);
 
     tm
+}
+
+#[derive(PartialEq, Debug)]
+pub enum IntersectionStatus {
+    Crosses,
+    NeverCrosses,
+}
+
+/// Determines when a unit sphere starts and finishes intersecting/colliding a plane.
+/// * `unit_sphere_start` - the initial position of the center of a unit sphere to check
+/// * `unit_sphere_velocity` - a vector indicating how far the unit sphere will move
+/// * `tp1`, `tp2`, `tp3` - three points that will be used to define a plane. Expected in CCW order.
+///
+/// Returns t0, t1 as the fraction of `unit_sphere_velocity` the sphere needs to travel
+/// to start and finish colliding with the plane, respectively. 0 means the start position
+/// and 1 means the end position of the sphere, but returned values could be
+/// outside that range if the sphere is already colliding or does not collide with the plane.
+pub fn intersect_plane(
+    unit_sphere_start: cgmath::Vector3<f32>,
+    unit_sphere_velocity: cgmath::Vector3<f32>,
+    tp1: cgmath::Vector3<f32>,
+    tp2: cgmath::Vector3<f32>,
+    tp3: cgmath::Vector3<f32>,
+) -> (f32, f32, IntersectionStatus) {
+    let plane_normal = (tp2 - tp1).cross(tp3 - tp1).normalize();
+    println!("normal: {:?}", plane_normal);
+    let point_on_plane = tp1;
+
+    let signed_distance = (unit_sphere_start - point_on_plane).dot(plane_normal);
+    println!("signed distance: {:?}", signed_distance);
+    let denom = unit_sphere_velocity.dot(plane_normal);
+
+    if denom.abs() < 0.00001 {
+        if signed_distance < 1.0 {
+            return (0.0, 1.0, IntersectionStatus::NeverCrosses);
+        } else {
+            return (0.0, 0.0, IntersectionStatus::NeverCrosses);
+        }
+    }
+
+    let t0 = (1.0 - signed_distance) / denom;
+    let t1 = (-1.0 - signed_distance) / denom;
+
+    (t0, t1, IntersectionStatus::Crosses)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn assert_eq_eps_f32(a: f32, b: f32, eps: f32) {
+        assert!((a - b).abs() < eps);
+    }
+
+    #[test]
+    fn interesect_plane_big_triangle() {
+        let (t0, t1, status) = intersect_plane(
+            cgmath::Vector3::new(0.0, 0.0, 2.0),
+            cgmath::Vector3::new(4.0, 0.0, -4.0),
+            cgmath::Vector3::new(-5.0, 0.0, 0.0),
+            cgmath::Vector3::new(7.0, -5.0, 0.0),
+            cgmath::Vector3::new(7.0, 5.0, 0.0),
+        );
+
+        assert_eq_eps_f32(t0, 0.25, 0.00001);
+        assert_eq_eps_f32(t1, 0.75, 0.00001);
+        assert_eq!(status, IntersectionStatus::Crosses);
+    }
+
+    #[test]
+    fn interesect_plane_small_triangle() {
+        let (t0, t1, status) = intersect_plane(
+            cgmath::Vector3::new(0.0, 0.0, 2.0),
+            cgmath::Vector3::new(4.0, 0.0, -4.0),
+            cgmath::Vector3::new(-1.0, 0.0, 0.0),
+            cgmath::Vector3::new(2.0, -1.0, 0.0),
+            cgmath::Vector3::new(2.0, 1.0, 0.0),
+        );
+
+        assert_eq_eps_f32(t0, 0.25, 0.00001);
+        assert_eq_eps_f32(t1, 0.75, 0.00001);
+        assert_eq!(status, IntersectionStatus::Crosses);
+    }
+
+    #[test]
+    fn interesect_plane_after_move() {
+        let (t0, t1, status) = intersect_plane(
+            cgmath::Vector3::new(0.0, 0.0, 2.0),
+            cgmath::Vector3::new(0.5, 0.0, -0.5),
+            cgmath::Vector3::new(-5.0, 0.0, 0.0),
+            cgmath::Vector3::new(7.0, -5.0, 0.0),
+            cgmath::Vector3::new(7.0, 5.0, 0.0),
+        );
+
+        assert_eq_eps_f32(t0, 2.0, 0.00001);
+        assert_eq_eps_f32(t1, 6.0, 0.00001);
+        assert_eq!(status, IntersectionStatus::Crosses);
+    }
+
+    #[test]
+    fn interesect_plane_before_move() {
+        let (t0, t1, status) = intersect_plane(
+            cgmath::Vector3::new(0.0, 0.0, 2.0),
+            cgmath::Vector3::new(4.0, 0.0, 4.0),
+            cgmath::Vector3::new(-5.0, 0.0, 0.0),
+            cgmath::Vector3::new(7.0, -5.0, 0.0),
+            cgmath::Vector3::new(7.0, 5.0, 0.0),
+        );
+
+        assert_eq_eps_f32(t0, -0.25, 0.00001);
+        assert_eq_eps_f32(t1, -0.75, 0.00001);
+        assert_eq!(status, IntersectionStatus::Crosses);
+    }
+
+    #[test]
+    fn interesect_plane_starts_intersected() {
+        let (t0, t1, status) = intersect_plane(
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            cgmath::Vector3::new(4.0, 0.0, -4.0),
+            cgmath::Vector3::new(-5.0, 0.0, 0.0),
+            cgmath::Vector3::new(7.0, -5.0, 0.0),
+            cgmath::Vector3::new(7.0, 5.0, 0.0),
+        );
+
+        assert_eq_eps_f32(t0, -0.25, 0.00001);
+        assert_eq_eps_f32(t1, 0.25, 0.00001);
+        assert_eq!(status, IntersectionStatus::Crosses);
+    }
+
+    #[test]
+    fn interesect_plane_parallel_starts_intersected() {
+        let (t0, t1, status) = intersect_plane(
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            cgmath::Vector3::new(1.0, 0.0, 0.0),
+            cgmath::Vector3::new(-5.0, 0.0, 0.0),
+            cgmath::Vector3::new(7.0, -5.0, 0.0),
+            cgmath::Vector3::new(7.0, 5.0, 0.0),
+        );
+
+        assert_eq_eps_f32(t0, 0.0, 0.00001);
+        assert_eq_eps_f32(t1, 1.0, 0.00001);
+        assert_eq!(status, IntersectionStatus::NeverCrosses);
+    }
+
+    #[test]
+    fn interesect_plane_parallel_never_intersected() {
+        let (t0, t1, status) = intersect_plane(
+            cgmath::Vector3::new(0.0, 0.0, 2.0),
+            cgmath::Vector3::new(1.0, 0.0, 0.0),
+            cgmath::Vector3::new(-5.0, 0.0, 0.0),
+            cgmath::Vector3::new(7.0, -5.0, 0.0),
+            cgmath::Vector3::new(7.0, 5.0, 0.0),
+        );
+
+        assert_eq_eps_f32(t0, 0.0, 0.00001);
+        assert_eq_eps_f32(t1, 0.0, 0.00001);
+        assert_eq!(status, IntersectionStatus::NeverCrosses);
+    }
 }

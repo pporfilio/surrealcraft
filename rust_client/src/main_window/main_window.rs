@@ -37,6 +37,8 @@ pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
 
     let tm = collision_mesh_1();
 
+    // let tm = collision_mesh_2();
+
     let mut vertex_data: Vec<f32> = Vec::new();
     for (position, color) in tm.vertices.iter().zip(tm.colors) {
         vertex_data.push(position.x);
