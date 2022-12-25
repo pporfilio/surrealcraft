@@ -230,6 +230,7 @@ pub fn triangles_from_voxel_data(voxel_data: &VoxelData<Voxel>) -> TriangleMesh 
 pub enum IntersectionStatus {
     Crosses,
     NeverCrosses,
+    NeverCrossesEmbedded,
 }
 
 /// Determines when a unit sphere starts and finishes intersecting/colliding a plane.
@@ -258,7 +259,7 @@ pub fn intersect_plane(
 
     if denom.abs() < 0.00001 {
         if signed_distance < 1.0 {
-            return (0.0, 1.0, IntersectionStatus::NeverCrosses);
+            return (0.0, 0.0, IntersectionStatus::NeverCrossesEmbedded);
         } else {
             return (0.0, 0.0, IntersectionStatus::NeverCrosses);
         }
@@ -364,8 +365,8 @@ mod tests {
         );
 
         assert_eq_eps_f32(t0, 0.0, 0.00001);
-        assert_eq_eps_f32(t1, 1.0, 0.00001);
-        assert_eq!(status, IntersectionStatus::NeverCrosses);
+        assert_eq_eps_f32(t1, 0.0, 0.00001);
+        assert_eq!(status, IntersectionStatus::NeverCrossesEmbedded);
     }
 
     #[test]
