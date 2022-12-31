@@ -242,34 +242,110 @@ pub enum IntersectionStatus {
 /// to start and finish colliding with the plane, respectively. 0 means the start position
 /// and 1 means the end position of the sphere, but returned values could be
 /// outside that range if the sphere is already colliding or does not collide with the plane.
+/// Returns intersection point: the point where the sphere touches the plane at t0, whether
+/// or not that point is within the triangle that defines the plane.
+/// Returns IntersectionStatus to indicate if the velocity crosses the plane normally,
+/// is parallel to the plane but the sphere is outside the plane, or is parallel to the
+/// plane but the sphere is already intersecting the plane.
 pub fn intersect_plane(
     unit_sphere_start: cgmath::Vector3<f32>,
     unit_sphere_velocity: cgmath::Vector3<f32>,
     tp1: cgmath::Vector3<f32>,
     tp2: cgmath::Vector3<f32>,
     tp3: cgmath::Vector3<f32>,
-) -> (f32, f32, IntersectionStatus) {
+) -> (f32, f32, cgmath::Vector3<f32>, IntersectionStatus) {
     let plane_normal = (tp2 - tp1).cross(tp3 - tp1).normalize();
-    println!("normal: {:?}", plane_normal);
+    // println!("normal: {:?}", plane_normal);
     let point_on_plane = tp1;
 
     let signed_distance = (unit_sphere_start - point_on_plane).dot(plane_normal);
-    println!("signed distance: {:?}", signed_distance);
+    // println!("signed distance: {:?}", signed_distance);
     let denom = unit_sphere_velocity.dot(plane_normal);
 
     if denom.abs() < 0.00001 {
         if signed_distance < 1.0 {
-            return (0.0, 0.0, IntersectionStatus::NeverCrossesEmbedded);
+            return (
+                0.0,
+                0.0,
+                cgmath::Vector3::new(0.0, 0.0, 0.0),
+                IntersectionStatus::NeverCrossesEmbedded,
+            );
         } else {
-            return (0.0, 0.0, IntersectionStatus::NeverCrosses);
+            return (
+                0.0,
+                0.0,
+                cgmath::Vector3::new(0.0, 0.0, 0.0),
+                IntersectionStatus::NeverCrosses,
+            );
         }
     }
 
     let t0 = (1.0 - signed_distance) / denom;
     let t1 = (-1.0 - signed_distance) / denom;
 
-    (t0, t1, IntersectionStatus::Crosses)
+    let plane_intersection_point = unit_sphere_start - plane_normal + t0 * unit_sphere_velocity;
+
+    (
+        t0,
+        t1,
+        plane_intersection_point,
+        IntersectionStatus::Crosses,
+    )
 }
+
+/// If a point is coplanar with a triangle and inside the triangle, then it makes a
+/// triangle with each pair of vertices that has the same winding order. To check this,
+/// check if the normal of each of the smaller triangles is the same direction as the
+/// normal of the original triangle. Assumes CCW order.
+pub fn point_in_triangle(
+    point: cgmath::Vector3<f32>,
+    tp1: cgmath::Vector3<f32>,
+    tp2: cgmath::Vector3<f32>,
+    tp3: cgmath::Vector3<f32>,
+) -> bool {
+    let n = (tp3 - tp2).cross(tp1 - tp2);
+    let na = (tp2 - tp1).cross(point - tp1);
+    let nb = (tp3 - tp2).cross(point - tp2);
+    let nc = (tp1 - tp3).cross(point - tp3);
+
+    println!(
+        "point_in_triangle point: {:?} tp1: {:?} tp2: {:?} tp3: {:?}",
+        point, tp1, tp2, tp3
+    );
+    println!("na dot n: {:?}", na.dot(n));
+    println!("nb dot n: {:?}", nb.dot(n));
+    println!("nc dot n: {:?}", nc.dot(n));
+
+    na.dot(n) > 0.0 && nb.dot(n) > 0.0 && nc.dot(n) > 0.0
+}
+
+// pub fn intersect_triangle(
+//     unit_sphere_start: cgmath::Vector3<f32>,
+//     unit_sphere_velocity: cgmath::Vector3<f32>,
+//     tp1: cgmath::Vector3<f32>,
+//     tp2: cgmath::Vector3<f32>,
+//     tp3: cgmath::Vector3<f32>,
+// ) -> (f32, f32, cgmath::Vector3<f32>, IntersectionStatus) {
+//     let (t0, t1, plane_intersection_point, status) =
+//         intersect_plane(unit_sphere_start, unit_sphere_velocity, tp1, tp2, tp3);
+//     if status == IntersectionStatus::Crosses {
+//         // plane_intersection_point =
+//     } else if status == IntersectionStatus::NeverCrossesEmbedded {
+//         // TODO: check if sphere is intersecting triangle or just plane
+//         return (t0, t1, cgmath::Vector3::new(0.0, 0.0, 0.0), status);
+//     } else {
+//         return (t0, t1, cgmath::Vector3::new(0.0, 0.0, 0.0), status);
+//     }
+// }
+
+/*
+for each triangle:
+    t0, t1, intersection_point, status = intersect_triangle(sphere, triangle)
+    if t0 < 0 and t1 > 0 or status == NeverCrossesEmbedded:
+        # need to move back out of this triangle
+    else if t0 > 1:
+        # need to collide and slide along triangle
+*/
 
 #[cfg(test)]
 mod tests {
@@ -279,9 +355,15 @@ mod tests {
         assert!((a - b).abs() < eps);
     }
 
+    fn assert_vector_eq_eps_f32(v1: cgmath::Vector3<f32>, v2: cgmath::Vector3<f32>, eps: f32) {
+        assert_eq_eps_f32(v1.x, v2.x, eps);
+        assert_eq_eps_f32(v1.y, v2.y, eps);
+        assert_eq_eps_f32(v1.z, v2.z, eps);
+    }
+
     #[test]
-    fn interesect_plane_big_triangle() {
-        let (t0, t1, status) = intersect_plane(
+    fn intersect_plane_big_triangle() {
+        let (t0, t1, plane_intersection_point, status) = intersect_plane(
             cgmath::Vector3::new(0.0, 0.0, 2.0),
             cgmath::Vector3::new(4.0, 0.0, -4.0),
             cgmath::Vector3::new(-5.0, 0.0, 0.0),
@@ -295,8 +377,8 @@ mod tests {
     }
 
     #[test]
-    fn interesect_plane_small_triangle() {
-        let (t0, t1, status) = intersect_plane(
+    fn intersect_plane_small_triangle() {
+        let (t0, t1, plane_intersection_point, status) = intersect_plane(
             cgmath::Vector3::new(0.0, 0.0, 2.0),
             cgmath::Vector3::new(4.0, 0.0, -4.0),
             cgmath::Vector3::new(-1.0, 0.0, 0.0),
@@ -310,8 +392,8 @@ mod tests {
     }
 
     #[test]
-    fn interesect_plane_after_move() {
-        let (t0, t1, status) = intersect_plane(
+    fn intersect_plane_after_move() {
+        let (t0, t1, plane_intersection_point, status) = intersect_plane(
             cgmath::Vector3::new(0.0, 0.0, 2.0),
             cgmath::Vector3::new(0.5, 0.0, -0.5),
             cgmath::Vector3::new(-5.0, 0.0, 0.0),
@@ -325,8 +407,8 @@ mod tests {
     }
 
     #[test]
-    fn interesect_plane_before_move() {
-        let (t0, t1, status) = intersect_plane(
+    fn intersect_plane_before_move() {
+        let (t0, t1, plane_intersection_point, status) = intersect_plane(
             cgmath::Vector3::new(0.0, 0.0, 2.0),
             cgmath::Vector3::new(4.0, 0.0, 4.0),
             cgmath::Vector3::new(-5.0, 0.0, 0.0),
@@ -340,8 +422,8 @@ mod tests {
     }
 
     #[test]
-    fn interesect_plane_starts_intersected() {
-        let (t0, t1, status) = intersect_plane(
+    fn intersect_plane_starts_intersected() {
+        let (t0, t1, plane_intersection_point, status) = intersect_plane(
             cgmath::Vector3::new(0.0, 0.0, 0.0),
             cgmath::Vector3::new(4.0, 0.0, -4.0),
             cgmath::Vector3::new(-5.0, 0.0, 0.0),
@@ -355,8 +437,8 @@ mod tests {
     }
 
     #[test]
-    fn interesect_plane_parallel_starts_intersected() {
-        let (t0, t1, status) = intersect_plane(
+    fn intersect_plane_parallel_starts_intersected() {
+        let (t0, t1, plane_intersection_point, status) = intersect_plane(
             cgmath::Vector3::new(0.0, 0.0, 0.0),
             cgmath::Vector3::new(1.0, 0.0, 0.0),
             cgmath::Vector3::new(-5.0, 0.0, 0.0),
@@ -366,12 +448,17 @@ mod tests {
 
         assert_eq_eps_f32(t0, 0.0, 0.00001);
         assert_eq_eps_f32(t1, 0.0, 0.00001);
+        assert_vector_eq_eps_f32(
+            plane_intersection_point,
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            0.00001,
+        );
         assert_eq!(status, IntersectionStatus::NeverCrossesEmbedded);
     }
 
     #[test]
-    fn interesect_plane_parallel_never_intersected() {
-        let (t0, t1, status) = intersect_plane(
+    fn intersect_plane_parallel_never_intersected() {
+        let (t0, t1, plane_intersection_point, status) = intersect_plane(
             cgmath::Vector3::new(0.0, 0.0, 2.0),
             cgmath::Vector3::new(1.0, 0.0, 0.0),
             cgmath::Vector3::new(-5.0, 0.0, 0.0),
@@ -381,6 +468,61 @@ mod tests {
 
         assert_eq_eps_f32(t0, 0.0, 0.00001);
         assert_eq_eps_f32(t1, 0.0, 0.00001);
+        assert_vector_eq_eps_f32(
+            plane_intersection_point,
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            0.00001,
+        );
         assert_eq!(status, IntersectionStatus::NeverCrosses);
+    }
+
+    #[test]
+    fn point_in_triangle_true() {
+        println!("point_in_triangle_true");
+        assert!(point_in_triangle(
+            cgmath::Vector3::new(0.5, 0.5, 0.0),
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            cgmath::Vector3::new(2.0, 0.0, 0.0),
+            cgmath::Vector3::new(0.0, 2.0, 0.0),
+        ));
+    }
+
+    #[test]
+    fn point_in_triangle_false() {
+        assert_eq!(
+            false,
+            point_in_triangle(
+                cgmath::Vector3::new(-1.0, 0.5, 0.0),
+                cgmath::Vector3::new(0.0, 0.0, 0.0),
+                cgmath::Vector3::new(2.0, 0.0, 0.0),
+                cgmath::Vector3::new(0.0, 2.0, 0.0),
+            )
+        );
+    }
+
+    #[test]
+    fn point_in_triangle_on_edge() {
+        assert_eq!(
+            false,
+            point_in_triangle(
+                cgmath::Vector3::new(0.0, 1.0, 0.0),
+                cgmath::Vector3::new(0.0, 0.0, 0.0),
+                cgmath::Vector3::new(2.0, 0.0, 0.0),
+                cgmath::Vector3::new(0.0, 2.0, 0.0),
+            )
+        );
+    }
+
+    #[test]
+    fn point_in_triangle_on_vertex() {
+        assert_eq!(
+            false,
+            point_in_triangle(
+                cgmath::Vector3::new(0.0, 0.0, 0.0),
+                cgmath::Vector3::new(0.0, 0.0, 0.0),
+                cgmath::Vector3::new(2.0, 0.0, 0.0),
+                cgmath::Vector3::new(0.0, 2.0, 0.0),
+            )
+        );
     }
 }
