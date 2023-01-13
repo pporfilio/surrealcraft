@@ -414,6 +414,19 @@ mod tests {
 
         assert_eq_eps_f32(t0, 0.25, 0.00001);
         assert_eq_eps_f32(t1, 0.75, 0.00001);
+
+        // Triangle is the plane z = 0
+        // sphere starts at x = 0, y = 0, z = 2
+        // sphere has radius 1
+        // sphere moves in +x, -z equal amounts
+        // when it moves -1 z it touches the plane 1 unit away from its center, at z = 0
+        // it's center is at x = 1, y = 0, z = 1 at that point,
+        //  so it touches at x = 1, y = 0, z = 0
+        assert_vector_eq_eps_f32(
+            plane_intersection_point,
+            cgmath::Vector3::new(1.0, 0.0, 0.0),
+            0.00001,
+        );
         assert_eq!(status, IntersectionStatus::Crosses);
     }
 
@@ -429,6 +442,11 @@ mod tests {
 
         assert_eq_eps_f32(t0, 0.25, 0.00001);
         assert_eq_eps_f32(t1, 0.75, 0.00001);
+        assert_vector_eq_eps_f32(
+            plane_intersection_point,
+            cgmath::Vector3::new(1.0, 0.0, 0.0),
+            0.00001,
+        );
         assert_eq!(status, IntersectionStatus::Crosses);
     }
 
@@ -444,6 +462,11 @@ mod tests {
 
         assert_eq_eps_f32(t0, 2.0, 0.00001);
         assert_eq_eps_f32(t1, 6.0, 0.00001);
+        assert_vector_eq_eps_f32(
+            plane_intersection_point,
+            cgmath::Vector3::new(1.0, 0.0, 0.0),
+            0.00001,
+        );
         assert_eq!(status, IntersectionStatus::Crosses);
     }
 
@@ -451,7 +474,7 @@ mod tests {
     fn intersect_plane_before_move() {
         let (t0, t1, plane_intersection_point, status) = intersect_plane(
             cgmath::Vector3::new(0.0, 0.0, 2.0),
-            cgmath::Vector3::new(4.0, 0.0, 4.0),
+            cgmath::Vector3::new(-4.0, 0.0, 4.0),
             cgmath::Vector3::new(-5.0, 0.0, 0.0),
             cgmath::Vector3::new(7.0, -5.0, 0.0),
             cgmath::Vector3::new(7.0, 5.0, 0.0),
@@ -459,6 +482,11 @@ mod tests {
 
         assert_eq_eps_f32(t0, -0.25, 0.00001);
         assert_eq_eps_f32(t1, -0.75, 0.00001);
+        assert_vector_eq_eps_f32(
+            plane_intersection_point,
+            cgmath::Vector3::new(1.0, 0.0, 0.0),
+            0.00001,
+        );
         assert_eq!(status, IntersectionStatus::Crosses);
     }
 
@@ -474,6 +502,11 @@ mod tests {
 
         assert_eq_eps_f32(t0, -0.25, 0.00001);
         assert_eq_eps_f32(t1, 0.25, 0.00001);
+        assert_vector_eq_eps_f32(
+            plane_intersection_point,
+            cgmath::Vector3::new(-1.0, 0.0, 0.0),
+            0.00001,
+        );
         assert_eq!(status, IntersectionStatus::Crosses);
     }
 
