@@ -1,4 +1,4 @@
-use cgmath::{num_traits::sign, InnerSpace};
+use cgmath::InnerSpace;
 
 use super::voxels::{Voxel, VoxelData};
 
@@ -190,9 +190,9 @@ pub fn triangles_from_voxel_data(voxel_data: &VoxelData<Voxel>) -> TriangleMesh 
     use std::time::Instant;
     let start = Instant::now();
 
-    let voxel_guess = (voxel_data.dimensions().x as usize
+    let voxel_guess = voxel_data.dimensions().x as usize
         * voxel_data.dimensions().y as usize
-        * voxel_data.dimensions().z as usize);
+        * voxel_data.dimensions().z as usize;
 
     let vertex_guess = 8 * voxel_guess;
     let index_guess = 36 * voxel_guess;
@@ -317,6 +317,47 @@ pub fn point_in_triangle(
     println!("nc dot n: {:?}", nc.dot(n));
 
     na.dot(n) > 0.0 && nb.dot(n) > 0.0 && nc.dot(n) > 0.0
+}
+
+/// Given a unit sphere starting location, a velocity, and a point to collide against,
+/// determines the first time the outside of the sphere collides with the point moving
+/// forward along the velocity. Returning 0 means the sphere starts touching the point.
+/// Returning 1 means the sphere ends touching the point. Returning > 1 means the
+/// sphere would eventually touch the point if it kept moving along the same velocity
+/// vector.
+///
+/// Returns (t, bool) where t is how far along the velocity the sphere reaches the
+/// point and bool is true if it touches eventually or false otherwise.
+/// If the point starts inside the sphere, t will be the time when the point exits the
+/// sphere.
+pub fn collide_point(
+    unit_sphere_start: cgmath::Vector3<f32>,
+    unit_sphere_velocity: cgmath::Vector3<f32>,
+    point: cgmath::Vector3<f32>,
+) -> (f32, bool) {
+    let a = unit_sphere_velocity.dot(unit_sphere_velocity);
+    let b = 2.0 * unit_sphere_velocity.dot(unit_sphere_start - point);
+    let c = (point - unit_sphere_start).dot(point - unit_sphere_start) - 1.0;
+
+    let determinant = b * b - 4.0 * a * c;
+    if determinant < 0.0 {
+        return (0.0, false);
+    }
+
+    let sqrt_d = determinant.sqrt();
+    let r1 = (-1.0 * b - sqrt_d) / (2.0 * a);
+    let r2 = (-1.0 * b + sqrt_d) / (2.0 * a);
+
+    let r_min = r1.min(r2);
+    let r_max = r1.max(r2);
+
+    if r_min >= 0.0 {
+        return (r_min, true);
+    } else if r_max >= 0.0 {
+        return (r_max, true);
+    } else {
+        return (-1.0, false);
+    }
 }
 
 // pub fn intersect_triangle(
@@ -525,4 +566,47 @@ mod tests {
             )
         );
     }
+
+    #[test]
+    fn collide_point_happy_path() {
+        let (t, collides) = collide_point(
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            cgmath::Vector3::new(0.0, 3.0, 0.0),
+            cgmath::Vector3::new(0.0, 2.5, 0.0),
+        );
+        assert_eq!(true, collides);
+        assert_eq_eps_f32(t, 0.5, 0.00001);
+    }
+
+    #[test]
+    fn collide_point_start() {
+        let (t, collides) = collide_point(
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            cgmath::Vector3::new(0.0, 3.0, 0.0),
+            cgmath::Vector3::new(0.0, 1.0, 0.0),
+        );
+        println!("{}, {}", t, collides);
+        assert_eq!(true, collides);
+        assert_eq_eps_f32(t, 0.0, 0.00001);
+    }
+
+    #[test]
+    fn collide_point_end() {
+        let (t, collides) = collide_point(
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            cgmath::Vector3::new(0.0, 3.0, 0.0),
+            cgmath::Vector3::new(0.0, 4.0, 0.0),
+        );
+        assert_eq!(true, collides);
+        assert_eq_eps_f32(t, 1.0, 0.00001);
+    }
+
+    #[test]
+    fn collide_point_no_collision() {}
+
+    #[test]
+    fn collide_point_start_inside() {}
+
+    #[test]
+    fn collide_point_start_past() {}
 }
