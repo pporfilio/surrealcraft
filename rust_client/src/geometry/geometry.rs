@@ -552,7 +552,6 @@ mod tests {
 
     #[test]
     fn point_in_triangle_true() {
-        println!("point_in_triangle_true");
         assert!(point_in_triangle(
             cgmath::Vector3::new(0.5, 0.5, 0.0),
             cgmath::Vector3::new(0.0, 0.0, 0.0),
