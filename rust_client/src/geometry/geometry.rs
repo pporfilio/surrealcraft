@@ -255,11 +255,9 @@ pub fn intersect_plane(
     tp3: cgmath::Vector3<f32>,
 ) -> (f32, f32, cgmath::Vector3<f32>, IntersectionStatus) {
     let plane_normal = (tp2 - tp1).cross(tp3 - tp1).normalize();
-    // println!("normal: {:?}", plane_normal);
     let point_on_plane = tp1;
 
     let signed_distance = (unit_sphere_start - point_on_plane).dot(plane_normal);
-    // println!("signed distance: {:?}", signed_distance);
     let denom = unit_sphere_velocity.dot(plane_normal);
 
     if denom.abs() < 0.00001 {
@@ -297,6 +295,11 @@ pub fn intersect_plane(
 /// triangle with each pair of vertices that has the same winding order. To check this,
 /// check if the normal of each of the smaller triangles is the same direction as the
 /// normal of the original triangle. Assumes CCW order.
+///
+/// Returns true if point is withing the triangle
+/// Returns false if point is equal to one of the vertices, if point is on an edge, or
+///     if point is entirely outside the triangle.
+
 pub fn point_in_triangle(
     point: cgmath::Vector3<f32>,
     tp1: cgmath::Vector3<f32>,
@@ -307,14 +310,6 @@ pub fn point_in_triangle(
     let na = (tp2 - tp1).cross(point - tp1);
     let nb = (tp3 - tp2).cross(point - tp2);
     let nc = (tp1 - tp3).cross(point - tp3);
-
-    println!(
-        "point_in_triangle point: {:?} tp1: {:?} tp2: {:?} tp3: {:?}",
-        point, tp1, tp2, tp3
-    );
-    println!("na dot n: {:?}", na.dot(n));
-    println!("nb dot n: {:?}", nb.dot(n));
-    println!("nc dot n: {:?}", nc.dot(n));
 
     na.dot(n) > 0.0 && nb.dot(n) > 0.0 && nc.dot(n) > 0.0
 }
@@ -331,6 +326,22 @@ pub fn point_in_triangle(
 /// If the point starts inside the sphere, t will be the time when the point exits the
 /// sphere.
 pub fn collide_point(
+    unit_sphere_start: cgmath::Vector3<f32>,
+    unit_sphere_velocity: cgmath::Vector3<f32>,
+    point: cgmath::Vector3<f32>,
+) -> (f32, bool) {
+    // Currently no good way to tell if point started inside sphere: looks the same
+    // as a point outside the sphere
+    assert!((point - unit_sphere_start).dot(point - unit_sphere_start) >= 1.0);
+
+    // If velocity is 0, a is 0, which leads to NaN.
+    // TODO: If velocity is 0, it's easy to check if a sphere is currently touching
+    // a point.
+    assert!(unit_sphere_velocity.dot(unit_sphere_velocity) != 0.0);
+    return collide_point_unchecked(unit_sphere_start, unit_sphere_velocity, point);
+}
+
+pub fn collide_point_unchecked(
     unit_sphere_start: cgmath::Vector3<f32>,
     unit_sphere_velocity: cgmath::Vector3<f32>,
     point: cgmath::Vector3<f32>,
@@ -357,6 +368,69 @@ pub fn collide_point(
         return (r_max, true);
     } else {
         return (-1.0, false);
+    }
+}
+
+/// Given a unit sphere starting location, a velcoity, and a line segment to collide
+/// against (p2 - p1), determines the first time the outside of the sphere collides
+/// with the line segment as the sphere moves forward along the velocity. Returning
+/// 0 means the sphere starts touching the line segment and returning 1 means the
+/// sphere ends touching the line segment. Returning > 1 means the sphere would
+/// eventually touch the line segment if it kept moving in the same direction.
+///
+/// returns (t, p, bool) where t is how far along the velocity the sphere touches
+/// the line segment, p is the point where it first touches, and bool is true
+/// if it touches eventually or false otherwise.
+///
+/// What happens if the line segment starts partially or fully inside the sphere?
+/// That's probably not good.
+pub fn collide_edge(
+    unit_sphere_start: cgmath::Vector3<f32>,
+    unit_sphere_velocity: cgmath::Vector3<f32>,
+    p1: cgmath::Vector3<f32>,
+    p2: cgmath::Vector3<f32>,
+) -> (f32, cgmath::Vector3<f32>, bool) {
+    let edge = p2 - p1;
+    let base_to_vertex = p1 - unit_sphere_start;
+
+    let a = edge.dot(edge) * -1.0 * unit_sphere_velocity.dot(unit_sphere_velocity)
+        + edge.dot(unit_sphere_velocity).powf(2.0);
+    let b = edge.dot(edge) * 2.0 * unit_sphere_velocity.dot(base_to_vertex)
+        - 2.0 * edge.dot(unit_sphere_velocity) * edge.dot(base_to_vertex);
+    let c = edge.dot(edge) * (1.0 - base_to_vertex.dot(base_to_vertex))
+        + edge.dot(base_to_vertex).powf(2.0);
+
+    let determinant = b * b - 4.0 * a * c;
+    if determinant < 0.0 || a.abs() < 0.00001 {
+        return (0.0, cgmath::Vector3::new(0.0, 0.0, 0.0), false);
+    }
+
+    let sqrt_d = determinant.sqrt();
+    let r1 = (-1.0 * b - sqrt_d) / (2.0 * a);
+    let r2 = (-1.0 * b + sqrt_d) / (2.0 * a);
+
+    let r_min = r1.min(r2);
+    let r_max = r1.max(r2);
+
+    let mut t = -1.0;
+    if r_min >= 0.0 {
+        t = r_min;
+    } else if r_max >= 0.0 {
+        t = r_max;
+    }
+
+    if t < 0.0 {
+        return (t, cgmath::Vector3::new(0.0, 0.0, 0.0), false);
+    }
+
+    // Now we know that the sphere will touch the line at time t but we
+    // need to find if it's in the line segment and if so where.
+    let f0 = (edge.dot(unit_sphere_velocity) * t - edge.dot(base_to_vertex)) / edge.dot(edge);
+
+    if f0 >= 0.0 && f0 <= 1.0 {
+        return (t, p1 + f0 * edge, true);
+    } else {
+        return (0.0, cgmath::Vector3::new(0.0, 0.0, 0.0), false);
     }
 }
 
@@ -392,6 +466,16 @@ for each triangle:
 mod tests {
     use super::*;
 
+    static COLLIDE_EPS: f32 = 0.00001;
+
+    // TODO: there are lots of degenerate cases like triangles that are lines or points,
+    // edges that are points, sphere that isn't moving, and probably more.
+    // Anything that leads to a being 0 in the quadratic equations is not good.
+
+    // There are a couple places where I compare against 0.0 or check that something is
+    // less than 0.00001. These probably both give weird results in certain situations,
+    // like objects moving really fast or very large/small geometries.
+
     fn assert_eq_eps_f32(a: f32, b: f32, eps: f32) {
         assert!((a - b).abs() < eps);
     }
@@ -413,7 +497,7 @@ mod tests {
         );
 
         assert_eq_eps_f32(t0, 0.25, 0.00001);
-        assert_eq_eps_f32(t1, 0.75, 0.00001);
+        assert_eq_eps_f32(t1, 0.75, COLLIDE_EPS);
 
         // Triangle is the plane z = 0
         // sphere starts at x = 0, y = 0, z = 2
@@ -425,7 +509,7 @@ mod tests {
         assert_vector_eq_eps_f32(
             plane_intersection_point,
             cgmath::Vector3::new(1.0, 0.0, 0.0),
-            0.00001,
+            COLLIDE_EPS,
         );
         assert_eq!(status, IntersectionStatus::Crosses);
     }
@@ -440,12 +524,12 @@ mod tests {
             cgmath::Vector3::new(2.0, 1.0, 0.0),
         );
 
-        assert_eq_eps_f32(t0, 0.25, 0.00001);
-        assert_eq_eps_f32(t1, 0.75, 0.00001);
+        assert_eq_eps_f32(t0, 0.25, COLLIDE_EPS);
+        assert_eq_eps_f32(t1, 0.75, COLLIDE_EPS);
         assert_vector_eq_eps_f32(
             plane_intersection_point,
             cgmath::Vector3::new(1.0, 0.0, 0.0),
-            0.00001,
+            COLLIDE_EPS,
         );
         assert_eq!(status, IntersectionStatus::Crosses);
     }
@@ -460,12 +544,12 @@ mod tests {
             cgmath::Vector3::new(7.0, 5.0, 0.0),
         );
 
-        assert_eq_eps_f32(t0, 2.0, 0.00001);
-        assert_eq_eps_f32(t1, 6.0, 0.00001);
+        assert_eq_eps_f32(t0, 2.0, COLLIDE_EPS);
+        assert_eq_eps_f32(t1, 6.0, COLLIDE_EPS);
         assert_vector_eq_eps_f32(
             plane_intersection_point,
             cgmath::Vector3::new(1.0, 0.0, 0.0),
-            0.00001,
+            COLLIDE_EPS,
         );
         assert_eq!(status, IntersectionStatus::Crosses);
     }
@@ -480,12 +564,12 @@ mod tests {
             cgmath::Vector3::new(7.0, 5.0, 0.0),
         );
 
-        assert_eq_eps_f32(t0, -0.25, 0.00001);
-        assert_eq_eps_f32(t1, -0.75, 0.00001);
+        assert_eq_eps_f32(t0, -0.25, COLLIDE_EPS);
+        assert_eq_eps_f32(t1, -0.75, COLLIDE_EPS);
         assert_vector_eq_eps_f32(
             plane_intersection_point,
             cgmath::Vector3::new(1.0, 0.0, 0.0),
-            0.00001,
+            COLLIDE_EPS,
         );
         assert_eq!(status, IntersectionStatus::Crosses);
     }
@@ -500,12 +584,12 @@ mod tests {
             cgmath::Vector3::new(7.0, 5.0, 0.0),
         );
 
-        assert_eq_eps_f32(t0, -0.25, 0.00001);
-        assert_eq_eps_f32(t1, 0.25, 0.00001);
+        assert_eq_eps_f32(t0, -0.25, COLLIDE_EPS);
+        assert_eq_eps_f32(t1, 0.25, COLLIDE_EPS);
         assert_vector_eq_eps_f32(
             plane_intersection_point,
             cgmath::Vector3::new(-1.0, 0.0, 0.0),
-            0.00001,
+            COLLIDE_EPS,
         );
         assert_eq!(status, IntersectionStatus::Crosses);
     }
@@ -520,12 +604,12 @@ mod tests {
             cgmath::Vector3::new(7.0, 5.0, 0.0),
         );
 
-        assert_eq_eps_f32(t0, 0.0, 0.00001);
-        assert_eq_eps_f32(t1, 0.0, 0.00001);
+        assert_eq_eps_f32(t0, 0.0, COLLIDE_EPS);
+        assert_eq_eps_f32(t1, 0.0, COLLIDE_EPS);
         assert_vector_eq_eps_f32(
             plane_intersection_point,
             cgmath::Vector3::new(0.0, 0.0, 0.0),
-            0.00001,
+            COLLIDE_EPS,
         );
         assert_eq!(status, IntersectionStatus::NeverCrossesEmbedded);
     }
@@ -540,12 +624,12 @@ mod tests {
             cgmath::Vector3::new(7.0, 5.0, 0.0),
         );
 
-        assert_eq_eps_f32(t0, 0.0, 0.00001);
-        assert_eq_eps_f32(t1, 0.0, 0.00001);
+        assert_eq_eps_f32(t0, 0.0, COLLIDE_EPS);
+        assert_eq_eps_f32(t1, 0.0, COLLIDE_EPS);
         assert_vector_eq_eps_f32(
             plane_intersection_point,
             cgmath::Vector3::new(0.0, 0.0, 0.0),
-            0.00001,
+            COLLIDE_EPS,
         );
         assert_eq!(status, IntersectionStatus::NeverCrosses);
     }
@@ -607,7 +691,7 @@ mod tests {
             cgmath::Vector3::new(0.0, 2.5, 0.0),
         );
         assert_eq!(true, collides);
-        assert_eq_eps_f32(t, 0.5, 0.00001);
+        assert_eq_eps_f32(t, 0.5, COLLIDE_EPS);
     }
 
     #[test]
@@ -617,9 +701,8 @@ mod tests {
             cgmath::Vector3::new(0.0, 3.0, 0.0),
             cgmath::Vector3::new(0.0, 1.0, 0.0),
         );
-        println!("{}, {}", t, collides);
         assert_eq!(true, collides);
-        assert_eq_eps_f32(t, 0.0, 0.00001);
+        assert_eq_eps_f32(t, 0.0, COLLIDE_EPS);
     }
 
     #[test]
@@ -630,15 +713,176 @@ mod tests {
             cgmath::Vector3::new(0.0, 4.0, 0.0),
         );
         assert_eq!(true, collides);
-        assert_eq_eps_f32(t, 1.0, 0.00001);
+        assert_eq_eps_f32(t, 1.0, COLLIDE_EPS);
     }
 
     #[test]
-    fn collide_point_no_collision() {}
+    fn collide_point_future() {
+        let (t, collides) = collide_point(
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            cgmath::Vector3::new(0.0, 3.0, 0.0),
+            cgmath::Vector3::new(0.0, 7.0, 0.0),
+        );
+        assert_eq!(true, collides);
+        assert_eq_eps_f32(t, 2.0, COLLIDE_EPS);
+    }
 
     #[test]
-    fn collide_point_start_inside() {}
+    fn collide_point_past() {
+        let (t, collides) = collide_point(
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            cgmath::Vector3::new(0.0, 3.0, 0.0),
+            cgmath::Vector3::new(0.0, -2.0, 0.0),
+        );
+        assert_eq!(false, collides);
+        assert_eq_eps_f32(t, -1.0, COLLIDE_EPS);
+    }
 
     #[test]
-    fn collide_point_start_past() {}
+    fn collide_point_no_collision() {
+        let (t, collides) = collide_point(
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            cgmath::Vector3::new(2.0, 0.0, 0.0),
+            cgmath::Vector3::new(1.0, 10.0, 0.0),
+        );
+        assert_eq!(false, collides);
+        assert_eq_eps_f32(t, 0.0, COLLIDE_EPS);
+    }
+
+    #[test]
+    fn collide_point_start_inside() {
+        let (t, collides) = collide_point_unchecked(
+            cgmath::Vector3::new(0.0, 0.0, 0.0),
+            cgmath::Vector3::new(2.0, 0.0, 0.0),
+            cgmath::Vector3::new(-0.5, 0.0, 0.0),
+        );
+        assert_eq!(true, collides);
+        assert_eq_eps_f32(t, 0.25, COLLIDE_EPS);
+    }
+
+    #[test]
+    fn collide_edge_happy_path() {
+        let (t, p, collides) = collide_edge(
+            cgmath::Vector3::new(3.0, 4.0, 0.0),
+            cgmath::Vector3::new(3.0, 0.0, 0.0),
+            cgmath::Vector3::new(5.0, 2.0, 0.0),
+            cgmath::Vector3::new(5.0, 5.0, 0.0),
+        );
+        assert_eq!(true, collides);
+        assert_eq_eps_f32(t, 0.3333333, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(p, cgmath::Vector3::new(5.0, 4.0, 0.0), COLLIDE_EPS);
+
+        // Check that this is invariant to the direction of the line segment
+        let (t, p, collides) = collide_edge(
+            cgmath::Vector3::new(3.0, 4.0, 0.0),
+            cgmath::Vector3::new(3.0, 0.0, 0.0),
+            cgmath::Vector3::new(5.0, 5.0, 0.0),
+            cgmath::Vector3::new(5.0, 2.0, 0.0),
+        );
+        assert_eq!(true, collides);
+        assert_eq_eps_f32(t, 0.3333333, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(p, cgmath::Vector3::new(5.0, 4.0, 0.0), COLLIDE_EPS);
+    }
+
+    #[test]
+    fn collide_edge_start() {
+        let (t, p, collides) = collide_edge(
+            cgmath::Vector3::new(3.0, 4.0, 0.0),
+            cgmath::Vector3::new(3.0, 0.0, 0.0),
+            cgmath::Vector3::new(4.0, 2.0, 0.0),
+            cgmath::Vector3::new(4.0, 5.0, 0.0),
+        );
+        assert_eq!(true, collides);
+        assert_eq_eps_f32(t, 0.0, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(p, cgmath::Vector3::new(4.0, 4.0, 0.0), COLLIDE_EPS);
+    }
+
+    #[test]
+    fn collide_edge_end() {
+        let (t, p, collides) = collide_edge(
+            cgmath::Vector3::new(3.0, 4.0, 0.0),
+            cgmath::Vector3::new(3.0, 0.0, 0.0),
+            cgmath::Vector3::new(7.0, 2.0, 0.0),
+            cgmath::Vector3::new(7.0, 5.0, 0.0),
+        );
+        assert_eq!(true, collides);
+        assert_eq_eps_f32(t, 1.0, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(p, cgmath::Vector3::new(7.0, 4.0, 0.0), COLLIDE_EPS);
+    }
+
+    #[test]
+    fn collide_edge_future() {
+        let (t, p, collides) = collide_edge(
+            cgmath::Vector3::new(3.0, 4.0, 0.0),
+            cgmath::Vector3::new(3.0, 0.0, 0.0),
+            cgmath::Vector3::new(10.0, 2.0, 0.0),
+            cgmath::Vector3::new(10.0, 5.0, 0.0),
+        );
+        assert_eq!(true, collides);
+        assert_eq_eps_f32(t, 2.0, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(p, cgmath::Vector3::new(10.0, 4.0, 0.0), COLLIDE_EPS);
+    }
+
+    #[test]
+    fn collide_edge_past() {
+        let (t, p, collides) = collide_edge(
+            cgmath::Vector3::new(3.0, 4.0, 0.0),
+            cgmath::Vector3::new(3.0, 0.0, 0.0),
+            cgmath::Vector3::new(-5.0, 2.0, 0.0),
+            cgmath::Vector3::new(-5.0, 5.0, 0.0),
+        );
+        assert_eq!(false, collides);
+        assert_eq_eps_f32(t, -1.0, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(p, cgmath::Vector3::new(0.0, 0.0, 0.0), COLLIDE_EPS);
+    }
+
+    #[test]
+    fn collide_edge_no_collision() {
+        let (t, p, collides) = collide_edge(
+            cgmath::Vector3::new(3.0, 4.0, 0.0),
+            cgmath::Vector3::new(3.0, 0.0, 0.0),
+            cgmath::Vector3::new(1.0, 0.0, 0.0),
+            cgmath::Vector3::new(5.0, 0.0, 0.0),
+        );
+        assert_eq!(false, collides);
+        assert_eq_eps_f32(t, 0.0, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(p, cgmath::Vector3::new(0.0, 0.0, 0.0), COLLIDE_EPS);
+    }
+
+    #[test]
+    fn collide_edge_angled_regression_test() {
+        let (t, p, collides) = collide_edge(
+            cgmath::Vector3::new(3.0, 4.0, 0.0),
+            cgmath::Vector3::new(3.0, 0.0, 0.0),
+            cgmath::Vector3::new(-1.0, 0.0, 0.0),
+            cgmath::Vector3::new(9.0, 5.0, 0.0),
+        );
+        assert_eq!(true, collides);
+        println!("\n\nangled: {:?}\n\n", t); // 0.58797735
+        println!("\n\nangled: {:?}\n\n", p); // [5.2111454, 3.1055727, 0.0]
+
+        // Wasn't sure how to/didn't try to calculate exact expected values
+        // so I just captured the output to use as a regression test.
+        assert_eq_eps_f32(t, 0.58797735, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(
+            p,
+            cgmath::Vector3::new(5.2111454, 3.1055727, 0.0),
+            COLLIDE_EPS,
+        );
+    }
+
+    #[test]
+    fn collide_edge_start_inside() {
+        let (t, p, collides) = collide_edge(
+            cgmath::Vector3::new(3.0, 4.0, 0.0),
+            cgmath::Vector3::new(3.0, 0.0, 0.0),
+            cgmath::Vector3::new(3.1, 2.0, 0.0),
+            cgmath::Vector3::new(3.1, 6.0, 0.0),
+        );
+        assert_eq!(true, collides);
+        println!("\n\n{:?}\n\n", t);
+        println!("\n\n{:?}\n\n", p);
+        assert_eq_eps_f32(t, 0.0, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(p, cgmath::Vector3::new(3.0, 3.0, 0.0), COLLIDE_EPS);
+    }
 }
