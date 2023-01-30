@@ -371,6 +371,25 @@ pub fn collide_point_unchecked(
     }
 }
 
+/// Given a point in space and p1, p2 on a line, returns the closest point on that
+/// line and where that closest point is relative to p1 and p2.
+///
+/// Returns (t, closest_point)
+/// If the closest point is between p1 and p2, t will be between 0 and 1
+pub fn closest_point_on_line(
+    point: cgmath::Vector3<f32>,
+    line_point_1: cgmath::Vector3<f32>,
+    line_point_2: cgmath::Vector3<f32>,
+) -> (f32, cgmath::Vector3<f32>) {
+    // math.stackexchange.com/questions/1521128/given-a-line-and-a-point-in-3d-how-to-find-the-closest-point-on-the-line
+    // mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+    let t = -1.0 * (line_point_2 - line_point_1).dot(line_point_1 - point)
+        / (line_point_2 - line_point_1).dot(line_point_2 - line_point_1);
+
+    let closest = line_point_1 + t * (line_point_2 - line_point_1);
+    return (t, closest);
+}
+
 /// Given a unit sphere starting location, a velcoity, and a line segment to collide
 /// against (p2 - p1), determines the first time the outside of the sphere collides
 /// with the line segment as the sphere moves forward along the velocity. Returning
@@ -382,14 +401,41 @@ pub fn collide_point_unchecked(
 /// the line segment, p is the point where it first touches, and bool is true
 /// if it touches eventually or false otherwise.
 ///
-/// What happens if the line segment starts partially or fully inside the sphere?
-/// That's probably not good.
+/// Fails assertion if the sphere starts intersecting the line segment. Does not fail
+/// assertion if sphere is just touching the line segment.
 pub fn collide_edge(
     unit_sphere_start: cgmath::Vector3<f32>,
     unit_sphere_velocity: cgmath::Vector3<f32>,
     p1: cgmath::Vector3<f32>,
     p2: cgmath::Vector3<f32>,
 ) -> (f32, cgmath::Vector3<f32>, bool) {
+    // This function doesn't give useful results if the line segment starts embedded in the
+    // sphere: it seems to give the time and point where the line segment becomes
+    // tangent to the sphere.
+    let (t, point) = closest_point_on_line(unit_sphere_start, p1, p2);
+    // If the closest point on the line is within the line segment and within 1 unit,
+    // we're intersecting it
+    if t > 0.0 && t < 1.0 {
+        if (unit_sphere_start - point).dot(unit_sphere_start - point) < 1.0 {
+            panic!(
+                "Unit sphere start intersected line segment.\nstart: {:?}\np1: {:?}\np2 {:?}",
+                unit_sphere_start, p1, p2
+            );
+        }
+    }
+
+    // If the closest point on the line is not within the line segment, then the
+    // closest part of the line segment is one of its endpoints, so make sure both
+    // endpoints are more than 1 unit away.
+    if (unit_sphere_start - p1).dot(unit_sphere_start - p1) < 1.0
+        || (unit_sphere_start - p2).dot(unit_sphere_start - p2) < 1.0
+    {
+        panic!(
+            "Unit sphere start intersected line endpoint.\nstart: {:?}\np1: {:?}\np2 {:?}",
+            unit_sphere_start, p1, p2
+        );
+    }
+
     let edge = p2 - p1;
     let base_to_vertex = p1 - unit_sphere_start;
 
@@ -761,6 +807,62 @@ mod tests {
     }
 
     #[test]
+    fn closest_point_on_line_happy_path() {
+        let (t, point) = closest_point_on_line(
+            cgmath::Vector3::new(3.0, 1.0, 0.0),
+            cgmath::Vector3::new(1.0, 1.0, 0.0),
+            cgmath::Vector3::new(3.0, 3.0, 0.0),
+        );
+        assert_eq_eps_f32(t, 0.5, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(point, cgmath::Vector3::new(2.0, 2.0, 0.0), COLLIDE_EPS);
+    }
+
+    #[test]
+    fn closest_point_on_line_segment_endpoints() {
+        let (start_t, start_point) = closest_point_on_line(
+            cgmath::Vector3::new(2.0, 0.0, 0.0),
+            cgmath::Vector3::new(1.0, 1.0, 0.0),
+            cgmath::Vector3::new(3.0, 3.0, 0.0),
+        );
+        assert_eq_eps_f32(start_t, 0.0, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(
+            start_point,
+            cgmath::Vector3::new(1.0, 1.0, 0.0),
+            COLLIDE_EPS,
+        );
+
+        let (end_t, end_point) = closest_point_on_line(
+            cgmath::Vector3::new(4.0, 2.0, 0.0),
+            cgmath::Vector3::new(1.0, 1.0, 0.0),
+            cgmath::Vector3::new(3.0, 3.0, 0.0),
+        );
+        assert_eq_eps_f32(end_t, 1.0, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(end_point, cgmath::Vector3::new(3.0, 3.0, 0.0), COLLIDE_EPS);
+    }
+
+    #[test]
+    fn closest_point_on_line_outside_segment() {
+        let (t, point) = closest_point_on_line(
+            cgmath::Vector3::new(5.0, 3.0, 0.0),
+            cgmath::Vector3::new(1.0, 1.0, 0.0),
+            cgmath::Vector3::new(3.0, 3.0, 0.0),
+        );
+        assert_eq_eps_f32(t, 1.5, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(point, cgmath::Vector3::new(4.0, 4.0, 0.0), COLLIDE_EPS);
+    }
+
+    #[test]
+    fn closest_point_on_line_distance_zero() {
+        let (t, point) = closest_point_on_line(
+            cgmath::Vector3::new(1.5, 1.5, 0.0),
+            cgmath::Vector3::new(1.0, 1.0, 0.0),
+            cgmath::Vector3::new(3.0, 3.0, 0.0),
+        );
+        assert_eq_eps_f32(t, 0.25, COLLIDE_EPS);
+        assert_vector_eq_eps_f32(point, cgmath::Vector3::new(1.5, 1.5, 0.0), COLLIDE_EPS);
+    }
+
+    #[test]
     fn collide_edge_happy_path() {
         let (t, p, collides) = collide_edge(
             cgmath::Vector3::new(3.0, 4.0, 0.0),
@@ -872,17 +974,24 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "Unit sphere start intersected line segment.")]
     fn collide_edge_start_inside() {
-        let (t, p, collides) = collide_edge(
+        collide_edge(
             cgmath::Vector3::new(3.0, 4.0, 0.0),
             cgmath::Vector3::new(3.0, 0.0, 0.0),
             cgmath::Vector3::new(3.1, 2.0, 0.0),
             cgmath::Vector3::new(3.1, 6.0, 0.0),
         );
-        assert_eq!(true, collides);
-        println!("\n\n{:?}\n\n", t);
-        println!("\n\n{:?}\n\n", p);
-        assert_eq_eps_f32(t, 0.0, COLLIDE_EPS);
-        assert_vector_eq_eps_f32(p, cgmath::Vector3::new(3.0, 3.0, 0.0), COLLIDE_EPS);
+    }
+
+    #[test]
+    #[should_panic(expected = "Unit sphere start intersected line endpoint.")]
+    fn collide_edge_endppoint_starts_inside() {
+        collide_edge(
+            cgmath::Vector3::new(3.0, 4.0, 0.0),
+            cgmath::Vector3::new(3.0, 0.0, 0.0),
+            cgmath::Vector3::new(3.1, 3.5, 0.0),
+            cgmath::Vector3::new(3.1, 0.0, 0.0),
+        );
     }
 }
