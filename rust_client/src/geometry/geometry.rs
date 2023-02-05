@@ -480,25 +480,68 @@ pub fn collide_edge(
     }
 }
 
-// pub fn intersect_triangle(
-//     unit_sphere_start: cgmath::Vector3<f32>,
-//     unit_sphere_velocity: cgmath::Vector3<f32>,
-//     tp1: cgmath::Vector3<f32>,
-//     tp2: cgmath::Vector3<f32>,
-//     tp3: cgmath::Vector3<f32>,
-// ) -> (f32, f32, cgmath::Vector3<f32>, IntersectionStatus) {
-//     let (t0, t1, plane_intersection_point, status) =
-//         intersect_plane(unit_sphere_start, unit_sphere_velocity, tp1, tp2, tp3);
-//     if status == IntersectionStatus::Crosses {
-//         // plane_intersection_point =
-//     } else if status == IntersectionStatus::NeverCrossesEmbedded {
-//         // TODO: check if sphere is intersecting triangle or just plane
-//         return (t0, t1, cgmath::Vector3::new(0.0, 0.0, 0.0), status);
-//     } else {
-//         return (t0, t1, cgmath::Vector3::new(0.0, 0.0, 0.0), status);
-//     }
-// }
+pub fn intersect_triangle(
+    unit_sphere_start: cgmath::Vector3<f32>,
+    unit_sphere_velocity: cgmath::Vector3<f32>,
+    tp1: cgmath::Vector3<f32>,
+    tp2: cgmath::Vector3<f32>,
+    tp3: cgmath::Vector3<f32>,
+) -> (f32, cgmath::Vector3<f32>, bool) {
+    let (t0, _, plane_intersection_point, status) =
+        intersect_plane(unit_sphere_start, unit_sphere_velocity, tp1, tp2, tp3);
+    if status == IntersectionStatus::Crosses && t0 >= 0.0 && t0 <= 1.0 {
+        // If the first place we touch this plane is inside the triangle, then that's
+        // the earliest collision and we don't have to check edges and vertices.
+        if point_in_triangle(plane_intersection_point, tp1, tp2, tp3) {
+            return (t0, plane_intersection_point, true);
+        }
 
+        // If we collide with the plane but the first place on the plane we touch is
+        // not inside the triangle, then we have to check if we touch an edge or vertex
+        // (which would occur after touching the plane outside the triangle)
+        // Check each vertex and each edge and return the closest collision.
+        // TODO: if we're checking edges, doesn't that include the vertices? Why
+        // do we also have to check the vertices?
+        let mut t_min = 2.0; // only counts as a collision if <= 1.0
+        let mut collision_point = cgmath::Vector3::new(0.0, 0.0, 0.0);
+        for point in [tp1, tp2, tp3] {
+            let (t_point, collides) = collide_point(unit_sphere_start, unit_sphere_velocity, point);
+            if collides && t_point < t_min {
+                t_min = t_point;
+                collision_point = point;
+            }
+        }
+        for (edge_start, edge_end) in [(tp1, tp2), (tp2, tp3), (tp3, tp1)] {
+            let (t_edge, edge_collision_point, collides) = collide_edge(
+                unit_sphere_start,
+                unit_sphere_velocity,
+                edge_start,
+                edge_end,
+            );
+            if collides && t_edge < t_min {
+                t_min = t_edge;
+                collision_point = edge_collision_point;
+            }
+        }
+
+        if t_min <= 1.0 {
+            return (t_min, collision_point, true);
+        }
+
+        return (0.0, cgmath::Vector3::new(0.0, 0.0, 0.0), false);
+    } else {
+        // TODO: could check if status is NeverCrossesEmbedded if it's actually
+        // embedded in the triangle or just the plane.
+        return (0.0, cgmath::Vector3::new(0.0, 0.0, 0.0), false);
+    }
+}
+
+pub fn collide_mesh(
+    unit_sphere_start: cgmath::Vector3<f32>,
+    unit_sphere_velocity: cgmath::Vector3<f32>,
+    mesh: TriangleMesh,
+) -> (f32, cgmath::Vector3<f32>, bool) {
+}
 /*
 for each triangle:
     t0, t1, intersection_point, status = intersect_triangle(sphere, triangle)
