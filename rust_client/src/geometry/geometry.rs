@@ -480,7 +480,10 @@ pub fn collide_edge(
     }
 }
 
-pub fn intersect_triangle(
+/// Checks if a unit sphere will intersect a triangle along its velocity.
+/// Returns fraction along the velocity (t), intersection point, and a bool indicating
+/// if there was a collision.
+pub fn collide_triangle(
     unit_sphere_start: cgmath::Vector3<f32>,
     unit_sphere_velocity: cgmath::Vector3<f32>,
     tp1: cgmath::Vector3<f32>,
@@ -536,20 +539,37 @@ pub fn intersect_triangle(
     }
 }
 
+/// Finds the first triangle a unit sphere traveling along a velocity vector will
+/// intersect. Returns the fraction along the velocity, intersection point, and
+/// index of the first triangle it would collide with.
+/// The index is the location in the indices array that points to the first vertex of
+/// the collided triangle.
 pub fn collide_mesh(
     unit_sphere_start: cgmath::Vector3<f32>,
     unit_sphere_velocity: cgmath::Vector3<f32>,
     mesh: TriangleMesh,
-) -> (f32, cgmath::Vector3<f32>, bool) {
+) -> (f32, cgmath::Vector3<f32>, usize, bool) {
+    let mut nearest_t = 2.0; // Greater than 1 doesn't collide in this time step.
+    let mut collision_point = cgmath::Vector3::new(0.0, 0.0, 0.0);
+    let mut collides = false;
+    let mut triangle_start_index = 0;
+    for i in 0..(mesh.indices.len() / 3) {
+        let (current_t, current_intersection_point, current_collides) = collide_triangle(
+            unit_sphere_start,
+            unit_sphere_velocity,
+            mesh.vertices[mesh.indices[i] as usize],
+            mesh.vertices[mesh.indices[i + 1] as usize],
+            mesh.vertices[mesh.indices[i + 2] as usize],
+        );
+        if (current_collides && current_t >= 0.0 && current_t <= 1.0 && current_t < nearest_t) {
+            nearest_t = current_t;
+            collision_point = current_intersection_point;
+            collides = true;
+            triangle_start_index = i;
+        }
+    }
+    return (nearest_t, collision_point, triangle_start_index, collides);
 }
-/*
-for each triangle:
-    t0, t1, intersection_point, status = intersect_triangle(sphere, triangle)
-    if t0 < 0 and t1 > 0 or status == NeverCrossesEmbedded:
-        # need to move back out of this triangle
-    else if t0 > 1:
-        # need to collide and slide along triangle
-*/
 
 #[cfg(test)]
 mod tests {
