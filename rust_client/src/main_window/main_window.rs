@@ -37,6 +37,11 @@ pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
 
     let tm = collision_mesh_1();
 
+    let unit_sphere_mesh = read_obj(
+        "C:\\Users\\parker\\Downloads\\unit_sphere_mesh.obj",
+        cgmath::Vector3::new(0.2, 0.3, 0.4),
+    );
+
     // let tm = collision_mesh_2();
 
     let mut vertex_data: Vec<f32> = Vec::new();

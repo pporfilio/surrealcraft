@@ -37,10 +37,10 @@ pub fn collision_mesh_1() -> TriangleMesh {
     let mut tm = TriangleMesh::new(200, 200);
 
     // Square at x = 5 facing toward origin
-    tm.vertices.push(cgmath::Vector3::new(5.1, 1.0, 0.5));
-    tm.vertices.push(cgmath::Vector3::new(5.1, 1.0, -0.5));
-    tm.vertices.push(cgmath::Vector3::new(4.9, -1.0, 0.5));
-    tm.vertices.push(cgmath::Vector3::new(4.9, -1.0, -0.5));
+    tm.vertices.push(cgmath::Vector3::new(5.1, 2.0, 2.0));
+    tm.vertices.push(cgmath::Vector3::new(5.1, 2.0, -2.0));
+    tm.vertices.push(cgmath::Vector3::new(4.9, -2.0, 2.0));
+    tm.vertices.push(cgmath::Vector3::new(4.9, -2.0, -2.0));
 
     tm.indices.push(0);
     tm.indices.push(1);
