@@ -257,7 +257,12 @@ pub fn intersect_plane(
     let plane_normal = (tp2 - tp1).cross(tp3 - tp1).normalize();
     let point_on_plane = tp1;
 
+    // This signed_distance is similar to distance_to_plane and
+    // https://mathworld.wolfram.com/Point-PlaneDistance.html
+    // except that we don't take the absolute value of the numerator and the
+    // denominator is 1 so it is omitted.
     let signed_distance = (unit_sphere_start - point_on_plane).dot(plane_normal);
+
     let denom = unit_sphere_velocity.dot(plane_normal);
 
     if denom.abs() < 0.00001 {
@@ -547,7 +552,7 @@ pub fn collide_triangle(
 pub fn collide_mesh(
     unit_sphere_start: cgmath::Vector3<f32>,
     unit_sphere_velocity: cgmath::Vector3<f32>,
-    mesh: TriangleMesh,
+    mesh: &TriangleMesh,
 ) -> (f32, cgmath::Vector3<f32>, usize, bool) {
     let mut nearest_t = 2.0; // Greater than 1 doesn't collide in this time step.
     let mut collision_point = cgmath::Vector3::new(0.0, 0.0, 0.0);
@@ -569,6 +574,80 @@ pub fn collide_mesh(
         }
     }
     return (nearest_t, collision_point, triangle_start_index, collides);
+}
+
+pub fn distance_to_plane(
+    point: cgmath::Vector3<f32>,
+    plane_origin: cgmath::Vector3<f32>,
+    plane_normal: cgmath::Vector3<f32>,
+) -> f32 {
+    // https://mathworld.wolfram.com/Point-PlaneDistance.html
+    let w = point - plane_origin;
+    return plane_normal.dot(w).abs() / plane_normal.dot(plane_normal);
+}
+
+/// Given a sphere starting position, velocity, and mesh to collide against, returns
+/// the location of the sphere after it has finished colliding and sliding against the
+/// mesh
+/// Returns ending position, number of recursions, and true if the motion finished
+/// (false if it stopped early, e.g. due to error or max recursion)
+pub fn move_sphere_with_collision(
+    unit_sphere_start: cgmath::Vector3<f32>,
+    unit_sphere_velocity: cgmath::Vector3<f32>,
+    mesh: &TriangleMesh,
+) -> (cgmath::Vector3<f32>, u32, bool) {
+    let mut attempts = 0;
+    let mut current_start = unit_sphere_start;
+    let mut current_velocity = unit_sphere_velocity;
+    while attempts < 5 {
+        // See where the remaining motion collides
+        let (t, collision_point, triangle_start_index, collides) =
+            collide_mesh(current_start, current_velocity, mesh);
+
+        // If we didn't collide (or collided at the end of our movement)
+        // we don't need to take any further action
+        if !collides || t == 1.0 {
+            return (current_start + current_velocity, attempts, true);
+        }
+
+        assert!(t >= 0.0 && t <= 1.0);
+
+        // Otherwise, we have to figure out how to slide against the collided triangle
+        // and see if the resulting slide has any collisions.
+        // I'm backing off by a tiny amount so that we don't immediately collide with
+        // the triangle again at time 0 when we start sliding. I made this up so I
+        // don't know if it's a good idea or not.
+        let new_position = current_start + (t - 0.00001) * current_velocity;
+
+        // I'll make the plane at the actual collision point, and not backed off a bit,
+        // so that the normal is as close to accurate as possible.
+        let plane_origin = collision_point;
+        let mut plane_normal = current_start + t * current_velocity - collision_point;
+        plane_normal = plane_normal.normalize();
+
+        // To find the new velocity vector, we want to find the projection of the point
+        // at the end of the original velocity onto the plane. The vector from the
+        // collision point to that projected point is our new velocity vector.
+        //
+        // We find the projected point by moving the end of the original velocity
+        // (current_start + current_velocity) back along the plane's normal. The
+        // amount we need to move it back is the distance from that point to the plane,
+        // as determined by distance_to_plane().
+        let distance =
+            distance_to_plane(current_start + current_velocity, plane_origin, plane_normal);
+        let current_destination = current_start + current_velocity;
+        let destination_on_plane = current_destination - distance * plane_normal;
+        // collision_point is the same as plane_origin
+        let new_velocity = destination_on_plane - collision_point;
+
+        attempts += 1;
+        current_start = new_position;
+        current_velocity = new_velocity;
+    }
+    // We get here if we maxed out recursions without using up all the original
+    // velocity. Don't add the latest current_velocity, because we haven't checked if
+    // we'd collide while moving along it.
+    return (current_start, attempts, false);
 }
 
 #[cfg(test)]
