@@ -566,7 +566,7 @@ pub fn collide_mesh(
             mesh.vertices[mesh.indices[i + 1] as usize],
             mesh.vertices[mesh.indices[i + 2] as usize],
         );
-        if (current_collides && current_t >= 0.0 && current_t <= 1.0 && current_t < nearest_t) {
+        if current_collides && current_t >= 0.0 && current_t <= 1.0 && current_t < nearest_t {
             nearest_t = current_t;
             collision_point = current_intersection_point;
             collides = true;
