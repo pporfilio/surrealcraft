@@ -1,4 +1,5 @@
 use super::buffers::GeometryBuffers;
+use super::buffers::InstanceRaw;
 use super::buffers::RawMatrix;
 use super::buffers::Vertex;
 use super::texture;
@@ -161,7 +162,10 @@ impl WGPUState {
                 module: &shader,
                 entry_point: "vs_main",
                 // What vertex format we want to pass to the vertex shader.
-                buffers: &[Vertex::desc()],
+                buffers: &[
+                    Vertex::desc(),
+                    InstanceRaw::get_vertex_buffer_layout_builder(5, 6, 7, 8).build(),
+                ],
             },
             // Wrapped in Some b/c fragment is technically optional
             fragment: Some(wgpu::FragmentState {
@@ -290,11 +294,16 @@ impl WGPUState {
                 &[],
             );
             render_pass.set_vertex_buffer(0, geometry.vertex_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, geometry.instance_buffer.slice(..));
             render_pass
                 .set_index_buffer(geometry.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-            // Draw something with 3 vertices and 1 instance.
+            // Note in the tutorial when adding instancing that
+            // Make sure if you add new instances to the Vec, that you recreate the
+            // instance_buffer and as well as camera_bind_group, otherwise your new
+            // instances won't show up correctly.
+            //
             // This is where @builtin(vertex_index) comes from.
-            render_pass.draw_indexed(0..geometry.index_count, 0, 0..1);
+            render_pass.draw_indexed(0..geometry.index_count, 0, 0..geometry.instance_count as _);
         }
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));

@@ -2,12 +2,13 @@ use super::super::geometry::geometry::*;
 use super::super::geometry::obj::*;
 use super::super::geometry::voxels::*;
 use super::buffers::GeometryBuffers;
-use super::buffers::INDICES;
-use super::buffers::VERTICES;
+use super::buffers::Instance;
+use super::buffers::InstanceRaw;
 use super::input_state::InputState;
 use super::wgpu_state::WGPUState;
 use crate::game::camera::rad_to_deg;
 use cgmath::InnerSpace;
+use cgmath::Rotation3;
 // use std::iter::Zip;
 use std::time::Instant;
 use wgpu::util::DeviceExt;
@@ -21,6 +22,10 @@ use winit::{
 use super::super::game::camera::Camera;
 
 pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
+    // TODO: WASM
+    // can't load files from disk in a web browser. They describe a webserver approach
+    // here: https://sotrh.github.io/learn-wgpu/beginner/tutorial9-models/#accessing-files-from-wasm
+
     // let vd =
     //     voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
     //         .unwrap();
@@ -35,9 +40,9 @@ pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
     // )
     // .unwrap();
 
-    let tm = collision_mesh_1();
+    // let tm = collision_mesh_1();
 
-    let unit_sphere = read_obj(
+    let tm = read_obj(
         "resources/unit_sphere.obj",
         cgmath::Vector3::new(0.2, 0.3, 0.4),
     )
@@ -70,11 +75,30 @@ pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
         usage: wgpu::BufferUsages::INDEX,
     });
 
+    let mut instances: Vec<Instance> = Vec::new();
+    for x in 0..10 {
+        for z in 0..10 {
+            instances.push(Instance {
+                position: cgmath::Vector3::new((x * 2) as f32, 0.0, (z * 2) as f32),
+                rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
+            })
+        }
+    }
+
+    let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+    let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Instance Buffer"),
+        contents: bytemuck::cast_slice(&instance_data),
+        usage: wgpu::BufferUsages::VERTEX,
+    });
+
     GeometryBuffers {
         vertex_buffer,
         index_buffer,
         vertex_count: tm.vertices.len() as u32,
         index_count: tm.indices.len() as u32,
+        instance_buffer,
+        instance_count: instances.len() as u32,
     }
 }
 

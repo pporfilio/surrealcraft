@@ -3,6 +3,8 @@ pub struct GeometryBuffers {
     pub index_buffer: wgpu::Buffer,
     pub vertex_count: u32,
     pub index_count: u32,
+    pub instance_buffer: wgpu::Buffer,
+    pub instance_count: u32,
 }
 
 // bytemuck traits say that this can be converted to bytes and can be used
@@ -68,5 +70,106 @@ impl RawMatrix {
         Self {
             matrix: matrix.into(),
         }
+    }
+}
+
+pub struct Instance {
+    pub position: cgmath::Vector3<f32>,
+    pub rotation: cgmath::Quaternion<f32>,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+pub struct InstanceRaw {
+    pub model: [[f32; 4]; 4],
+}
+
+impl Instance {
+    pub fn to_raw(&self) -> InstanceRaw {
+        InstanceRaw {
+            model: (cgmath::Matrix4::from_translation(self.position)
+                * cgmath::Matrix4::from(self.rotation))
+            .into(),
+        }
+    }
+}
+
+pub struct VertexBufferLayoutBuilder<'a> {
+    layout: wgpu::VertexBufferLayout<'a>,
+    attributes: Vec<wgpu::VertexAttribute>,
+}
+
+impl<'a> VertexBufferLayoutBuilder<'a> {
+    pub fn new() -> Self {
+        Self {
+            attributes: vec![],
+            layout: wgpu::VertexBufferLayout {
+                attributes: &[],
+                array_stride: 0 as wgpu::BufferAddress,
+                step_mode: wgpu::VertexStepMode::Vertex,
+            },
+        }
+    }
+
+    pub fn set_array_stride(mut self, array_stride: wgpu::BufferAddress) -> Self {
+        self.layout.array_stride = array_stride;
+        self
+    }
+
+    pub fn set_step_mode(mut self, step_mode: wgpu::VertexStepMode) -> Self {
+        self.layout.step_mode = step_mode;
+        self
+    }
+
+    pub fn set_attributes(mut self, attributes: Vec<wgpu::VertexAttribute>) -> Self {
+        self.attributes = attributes;
+        self
+    }
+
+    pub fn build(&'a self) -> wgpu::VertexBufferLayout<'a> {
+        let mut layout = self.layout.clone();
+        layout.attributes = &self.attributes;
+        layout
+    }
+}
+
+impl InstanceRaw {
+    // Why does the builder pattern work but just passing in parameters with static
+    // lifetimes or lifetimes of 'a not work? I don't know, but I found the builder
+    // pattern at https://github.com/gfx-rs/wgpu/discussions/2050
+    pub fn get_vertex_buffer_layout_builder<'a>(
+        shader_location_1: u32,
+        shader_location_2: u32,
+        shader_location_3: u32,
+        shader_location_4: u32,
+    ) -> VertexBufferLayoutBuilder<'a> {
+        use std::mem;
+        let builder = VertexBufferLayoutBuilder::new();
+        let builder =
+            builder.set_array_stride(mem::size_of::<InstanceRaw>() as wgpu::BufferAddress);
+        let builder = builder.set_step_mode(wgpu::VertexStepMode::Instance);
+        let builder = builder.set_attributes(vec![
+            wgpu::VertexAttribute {
+                offset: 0,
+                shader_location: shader_location_1,
+                format: wgpu::VertexFormat::Float32x4,
+            },
+            wgpu::VertexAttribute {
+                offset: mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
+                shader_location: shader_location_2,
+                format: wgpu::VertexFormat::Float32x4,
+            },
+            wgpu::VertexAttribute {
+                offset: mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
+                shader_location: shader_location_3,
+                format: wgpu::VertexFormat::Float32x4,
+            },
+            wgpu::VertexAttribute {
+                offset: mem::size_of::<[f32; 12]>() as wgpu::BufferAddress,
+                shader_location: shader_location_4,
+                format: wgpu::VertexFormat::Float32x4,
+            },
+        ]);
+        builder
     }
 }
