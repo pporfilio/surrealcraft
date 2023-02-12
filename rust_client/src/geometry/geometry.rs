@@ -37,10 +37,10 @@ pub fn collision_mesh_1() -> TriangleMesh {
     let mut tm = TriangleMesh::new(200, 200);
 
     // Square at x = 5 facing toward origin
-    tm.vertices.push(cgmath::Vector3::new(5.1, 2.0, 2.0));
-    tm.vertices.push(cgmath::Vector3::new(5.1, 2.0, -2.0));
-    tm.vertices.push(cgmath::Vector3::new(4.9, -2.0, 2.0));
-    tm.vertices.push(cgmath::Vector3::new(4.9, -2.0, -2.0));
+    tm.vertices.push(cgmath::Vector3::new(5.5, 2.0, 1.8));
+    tm.vertices.push(cgmath::Vector3::new(5.5, 2.0, -1.8));
+    tm.vertices.push(cgmath::Vector3::new(4.5, -2.0, 2.0));
+    tm.vertices.push(cgmath::Vector3::new(4.5, -2.0, -2.0));
 
     tm.indices.push(0);
     tm.indices.push(1);
@@ -264,6 +264,16 @@ pub fn intersect_plane(
     let signed_distance = (unit_sphere_start - point_on_plane).dot(plane_normal);
 
     let denom = unit_sphere_velocity.dot(plane_normal);
+
+    println!(
+        "unit_sphere_start: {:?}, point_on_plane: {:?}, plane_normal: {:?}, denom: {:?}, denom.abs(): {:?}, signed_distance: {:?}",
+        unit_sphere_start,
+        point_on_plane,
+        plane_normal,
+        denom,
+        denom.abs(),
+        signed_distance
+    );
 
     if denom.abs() < 0.00001 {
         if signed_distance < 1.0 {
@@ -495,8 +505,14 @@ pub fn collide_triangle(
     tp2: cgmath::Vector3<f32>,
     tp3: cgmath::Vector3<f32>,
 ) -> (f32, cgmath::Vector3<f32>, bool) {
-    let (t0, _, plane_intersection_point, status) =
+    let (t0, t1, plane_intersection_point, status) =
         intersect_plane(unit_sphere_start, unit_sphere_velocity, tp1, tp2, tp3);
+
+    println!(
+        "t0: {:?}, t1: {:?}, plane_intersection_point: {:?}, status: {:?}",
+        t0, t1, plane_intersection_point, status
+    );
+
     if status == IntersectionStatus::Crosses && t0 >= 0.0 && t0 <= 1.0 {
         // If the first place we touch this plane is inside the triangle, then that's
         // the earliest collision and we don't have to check edges and vertices.
@@ -559,13 +575,24 @@ pub fn collide_mesh(
     let mut collides = false;
     let mut triangle_start_index = 0;
     for i in 0..(mesh.indices.len() / 3) {
+        println!(
+            "Colliding against {:?}, {:?}, {:?}",
+            mesh.vertices[mesh.indices[i * 3] as usize],
+            mesh.vertices[mesh.indices[i * 3 + 1] as usize],
+            mesh.vertices[mesh.indices[i * 3 + 2] as usize]
+        );
         let (current_t, current_intersection_point, current_collides) = collide_triangle(
             unit_sphere_start,
             unit_sphere_velocity,
-            mesh.vertices[mesh.indices[i] as usize],
-            mesh.vertices[mesh.indices[i + 1] as usize],
-            mesh.vertices[mesh.indices[i + 2] as usize],
+            mesh.vertices[mesh.indices[i * 3] as usize],
+            mesh.vertices[mesh.indices[i * 3 + 1] as usize],
+            mesh.vertices[mesh.indices[i * 3 + 2] as usize],
         );
+        println!(
+            "current_t: {:?}, current_intersection_point: {:?}, current_collides: {:?}",
+            current_t, current_intersection_point, current_collides
+        );
+
         if current_collides && current_t >= 0.0 && current_t <= 1.0 && current_t < nearest_t {
             nearest_t = current_t;
             collision_point = current_intersection_point;
@@ -603,6 +630,11 @@ pub fn move_sphere_with_collision(
         // See where the remaining motion collides
         let (t, collision_point, triangle_start_index, collides) =
             collide_mesh(current_start, current_velocity, mesh);
+
+        println!(
+            "attempt: {:?}, t: {:?}, collision_point: {:?}, collides: {:?}",
+            attempts, t, collision_point, collides
+        );
 
         // If we didn't collide (or collided at the end of our movement)
         // we don't need to take any further action

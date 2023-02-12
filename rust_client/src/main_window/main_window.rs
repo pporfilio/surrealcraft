@@ -105,6 +105,7 @@ pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<Geo
     // )
     // .unwrap();
 
+    //let collision_mesh = collision_mesh_2();
     let collision_mesh = collision_mesh_1();
     let mut collision_mesh_instances: Vec<Instance> = Vec::new();
     collision_mesh_instances.push(Instance::new());
@@ -118,7 +119,11 @@ pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<Geo
     .unwrap();
 
     let mut unit_sphere_instances: Vec<Instance> = Vec::new();
-    unit_sphere_instances.push(Instance::new());
+    unit_sphere_instances.push(Instance {
+        // position: cgmath::Vector3::new(0.0, 0.0, 2.0),
+        position: cgmath::Vector3::new(0.0, 0.0, 0.0),
+        rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
+    });
     // for x in 0..10 {
     //     for z in 0..10 {
     //         unit_sphere_instances.push(Instance {
@@ -330,7 +335,14 @@ pub fn update_game_state(
     }
 
     if input_state.key_pressed(&VirtualKeyCode::Space) {
-        entities[0].instances[0].position += cgmath::Vector3::new(0.1, 0.0, 0.0);
+        let (new_location, attempts, finished_move) = move_sphere_with_collision(
+            entities[0].instances[0].position,
+            // cgmath::Vector3::new(0.1, 0.0, -0.1),
+            cgmath::Vector3::new(0.1, 0.0, 0.0),
+            &entities[1].mesh,
+        );
+        println!("{:?}, {:?}, {:?}", new_location, attempts, finished_move);
+        entities[0].instances[0].position = new_location;
     }
 }
 
