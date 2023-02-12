@@ -18,23 +18,27 @@ pub struct Vertex {
 }
 
 impl Vertex {
-    pub fn desc<'a>() -> wgpu::VertexBufferLayout<'a> {
-        wgpu::VertexBufferLayout {
-            array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
-            step_mode: wgpu::VertexStepMode::Vertex,
-            attributes: &[
-                wgpu::VertexAttribute {
-                    offset: 0,
-                    shader_location: 0,
-                    format: wgpu::VertexFormat::Float32x3,
-                },
-                wgpu::VertexAttribute {
-                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
-                    shader_location: 1,
-                    format: wgpu::VertexFormat::Float32x3,
-                },
-            ],
-        }
+    pub fn get_vertex_buffer_layout_builder<'a>(
+        shader_location_1: u32,
+        shader_location_2: u32,
+    ) -> VertexBufferLayoutBuilder<'a> {
+        let builder = VertexBufferLayoutBuilder::new();
+        let builder =
+            builder.set_array_stride(std::mem::size_of::<Vertex>() as wgpu::BufferAddress);
+        let builder = builder.set_step_mode(wgpu::VertexStepMode::Vertex);
+        let builder = builder.set_attributes(vec![
+            wgpu::VertexAttribute {
+                offset: 0,
+                shader_location: shader_location_1,
+                format: wgpu::VertexFormat::Float32x3,
+            },
+            wgpu::VertexAttribute {
+                offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                shader_location: shader_location_2,
+                format: wgpu::VertexFormat::Float32x3,
+            },
+        ]);
+        builder
     }
 }
 
@@ -143,10 +147,9 @@ impl InstanceRaw {
         shader_location_3: u32,
         shader_location_4: u32,
     ) -> VertexBufferLayoutBuilder<'a> {
-        use std::mem;
         let builder = VertexBufferLayoutBuilder::new();
         let builder =
-            builder.set_array_stride(mem::size_of::<InstanceRaw>() as wgpu::BufferAddress);
+            builder.set_array_stride(std::mem::size_of::<InstanceRaw>() as wgpu::BufferAddress);
         let builder = builder.set_step_mode(wgpu::VertexStepMode::Instance);
         let builder = builder.set_attributes(vec![
             wgpu::VertexAttribute {
@@ -155,17 +158,17 @@ impl InstanceRaw {
                 format: wgpu::VertexFormat::Float32x4,
             },
             wgpu::VertexAttribute {
-                offset: mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
+                offset: std::mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
                 shader_location: shader_location_2,
                 format: wgpu::VertexFormat::Float32x4,
             },
             wgpu::VertexAttribute {
-                offset: mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
+                offset: std::mem::size_of::<[f32; 8]>() as wgpu::BufferAddress,
                 shader_location: shader_location_3,
                 format: wgpu::VertexFormat::Float32x4,
             },
             wgpu::VertexAttribute {
-                offset: mem::size_of::<[f32; 12]>() as wgpu::BufferAddress,
+                offset: std::mem::size_of::<[f32; 12]>() as wgpu::BufferAddress,
                 shader_location: shader_location_4,
                 format: wgpu::VertexFormat::Float32x4,
             },

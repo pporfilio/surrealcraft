@@ -163,7 +163,7 @@ impl WGPUState {
                 entry_point: "vs_main",
                 // What vertex format we want to pass to the vertex shader.
                 buffers: &[
-                    Vertex::desc(),
+                    Vertex::get_vertex_buffer_layout_builder(0, 1).build(),
                     InstanceRaw::get_vertex_buffer_layout_builder(5, 6, 7, 8).build(),
                 ],
             },
@@ -241,7 +241,7 @@ impl WGPUState {
         );
     }
 
-    pub fn render(&mut self, geometry: &GeometryBuffers) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, geometry: &Vec<GeometryBuffers>) -> Result<(), wgpu::SurfaceError> {
         //sleep(Duration::new(2, 0));
 
         // Get texture to render to
@@ -293,17 +293,18 @@ impl WGPUState {
                 &self.camera_uniform.bind_group,
                 &[],
             );
-            render_pass.set_vertex_buffer(0, geometry.vertex_buffer.slice(..));
-            render_pass.set_vertex_buffer(1, geometry.instance_buffer.slice(..));
-            render_pass
-                .set_index_buffer(geometry.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-            // Note in the tutorial when adding instancing that
-            // Make sure if you add new instances to the Vec, that you recreate the
-            // instance_buffer and as well as camera_bind_group, otherwise your new
-            // instances won't show up correctly.
-            //
-            // This is where @builtin(vertex_index) comes from.
-            render_pass.draw_indexed(0..geometry.index_count, 0, 0..geometry.instance_count as _);
+            for g in geometry {
+                render_pass.set_vertex_buffer(0, g.vertex_buffer.slice(..));
+                render_pass.set_vertex_buffer(1, g.instance_buffer.slice(..));
+                render_pass.set_index_buffer(g.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+                // Note in the tutorial when adding instancing that
+                // Make sure if you add new instances to the Vec, that you recreate the
+                // instance_buffer and as well as camera_bind_group, otherwise your new
+                // instances won't show up correctly.
+                //
+                // This is where @builtin(vertex_index) comes from.
+                render_pass.draw_indexed(0..g.index_count, 0, 0..g.instance_count as _);
+            }
         }
         // submit will accept anything that implements IntoIter
         self.queue.submit(std::iter::once(encoder.finish()));

@@ -21,7 +21,7 @@ use winit::{
 
 use super::super::game::camera::Camera;
 
-pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
+pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
     // TODO: WASM
     // can't load files from disk in a web browser. They describe a webserver approach
     // here: https://sotrh.github.io/learn-wgpu/beginner/tutorial9-models/#accessing-files-from-wasm
@@ -92,14 +92,14 @@ pub fn initialize_geometry(device: &wgpu::Device) -> GeometryBuffers {
         usage: wgpu::BufferUsages::VERTEX,
     });
 
-    GeometryBuffers {
+    vec![GeometryBuffers {
         vertex_buffer,
         index_buffer,
         vertex_count: tm.vertices.len() as u32,
         index_count: tm.indices.len() as u32,
         instance_buffer,
         instance_count: instances.len() as u32,
-    }
+    }]
 }
 
 pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
