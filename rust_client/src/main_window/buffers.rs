@@ -5,6 +5,7 @@ pub struct GeometryBuffers {
     pub index_buffer: wgpu::Buffer,
     pub vertex_count: u32,
     pub index_count: u32,
+    pub instance_data: Vec<InstanceRaw>,
     pub instance_buffer: wgpu::Buffer,
     pub instance_count: u32,
 }

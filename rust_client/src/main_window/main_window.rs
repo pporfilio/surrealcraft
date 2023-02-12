@@ -7,6 +7,7 @@ use super::buffers::InstanceRaw;
 use super::input_state::InputState;
 use super::wgpu_state::WGPUState;
 use crate::game::camera::rad_to_deg;
+use crate::geometry;
 use cgmath::InnerSpace;
 use cgmath::Rotation3;
 // use std::iter::Zip;
@@ -20,6 +21,14 @@ use winit::{
 };
 
 use super::super::game::camera::Camera;
+
+// TODO
+// RenderEntity and Entity are both terrible names because they don't include, e.g.,
+// Camera and they include multiple instances.
+pub struct RenderEntity {
+    pub mesh: TriangleMesh,
+    pub instances: Vec<Instance>,
+}
 
 pub fn geometry_buffers_from_mesh(
     device: &wgpu::Device,
@@ -55,20 +64,26 @@ pub fn geometry_buffers_from_mesh(
     let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Instance Buffer"),
         contents: bytemuck::cast_slice(&instance_data),
-        usage: wgpu::BufferUsages::VERTEX,
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
     });
 
+    // TODO
+    // GeometryBuffers should probably be refactored into geometry that has
+    // a mesh, instance info, and a buffers sub-struct or something and a function
+    // to update the buffers from updated mesh/instances and a way to indicate
+    // what needs to be re-sent to the GPU.
     GeometryBuffers {
         vertex_buffer,
         index_buffer,
         vertex_count: mesh.vertices.len() as u32,
         index_count: mesh.indices.len() as u32,
+        instance_data,
         instance_buffer,
         instance_count: instances.len() as u32,
     }
 }
 
-pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
+pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
     // TODO: WASM
     // can't load files from disk in a web browser. They describe a webserver approach
     // here: https://sotrh.github.io/learn-wgpu/beginner/tutorial9-models/#accessing-files-from-wasm
@@ -113,18 +128,27 @@ pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
     //     }
     // }
 
-    let mut result: Vec<GeometryBuffers> = Vec::new();
-    result.push(geometry_buffers_from_mesh(
+    let mut entities: Vec<RenderEntity> = Vec::new();
+    let mut geometry_buffers: Vec<GeometryBuffers> = Vec::new();
+    geometry_buffers.push(geometry_buffers_from_mesh(
         device,
         &unit_sphere_mesh,
         &unit_sphere_instances,
     ));
+    entities.push(RenderEntity {
+        mesh: unit_sphere_mesh,
+        instances: unit_sphere_instances,
+    });
 
-    result.push(geometry_buffers_from_mesh(
+    geometry_buffers.push(geometry_buffers_from_mesh(
         device,
         &collision_mesh,
         &collision_mesh_instances,
     ));
+    entities.push(RenderEntity {
+        mesh: collision_mesh,
+        instances: collision_mesh_instances,
+    });
 
     // result.push(geometry_buffers_from_mesh(
     //     device,
@@ -132,7 +156,7 @@ pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
     //     &voxel_instances,
     // ));
 
-    result
+    (entities, geometry_buffers)
 }
 
 pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
@@ -284,7 +308,12 @@ pub fn get_camera_pitch_deg_delta(input_state: &InputState) -> f32 {
     }
 }
 
-pub fn update_game_state(input_state: &mut InputState, camera: &mut Camera, delta_s: f32) {
+pub fn update_game_state(
+    input_state: &mut InputState,
+    camera: &mut Camera,
+    entities: &mut Vec<RenderEntity>,
+    delta_s: f32,
+) {
     let movement_scale: f32 = 10.0;
     let rotation_scale: f32 = 0.2;
     camera.add_position_delta(
@@ -299,6 +328,10 @@ pub fn update_game_state(input_state: &mut InputState, camera: &mut Camera, delt
         camera.set_pitch_deg(0.0);
         camera.set_yaw_deg(0.0);
     }
+
+    if input_state.key_pressed(&VirtualKeyCode::Space) {
+        entities[0].instances[0].position += cgmath::Vector3::new(0.1, 0.0, 0.0);
+    }
 }
 
 pub async fn run() {
@@ -308,7 +341,7 @@ pub async fn run() {
 
     let mut wgpu_state = WGPUState::new(&window).await;
 
-    let geometry = initialize_geometry(&wgpu_state.device);
+    let (mut entities, mut geometry_buffers) = initialize_geometry(&wgpu_state.device);
 
     let mut camera = initialize_camera(&wgpu_state.config);
 
@@ -326,7 +359,7 @@ pub async fn run() {
                 // println!("{:?}", delta_s);
                 prev_loop_instant = current_loop_instant;
 
-                update_game_state(&mut input_state, &mut camera, delta_s);
+                update_game_state(&mut input_state, &mut camera, &mut entities, delta_s);
 
                 // println!(
                 //     "Camera yaw: {:?} pitch: {:?} position: {:?} look: {:?}",
@@ -342,9 +375,21 @@ pub async fn run() {
                 //     rad_to_deg(camera.yaw_rad())
                 // );
 
+                // This is some garbage maintaining these separate lists, but I don't
+                // want wgpu_state to know about TriangleMesh or Instance
+                // I ran into reference lifetime issues when I tried to store
+                // GeometryBuffers in the RenderEntity and then pull out a list of
+                // references to pass to the wgpu_state functions.
+                for entity_i in 0..entities.len() {
+                    for instance_i in 0..entities[entity_i].instances.len() {
+                        geometry_buffers[entity_i].instance_data[instance_i] =
+                            entities[entity_i].instances[instance_i].to_raw();
+                    }
+                }
+
                 // TODO: update camera aspect ratio in case wgpu_state.size changed
-                wgpu_state.update(camera.build_view_projection_matrix());
-                match wgpu_state.render(&geometry) {
+                wgpu_state.update(camera.build_view_projection_matrix(), &geometry_buffers);
+                match wgpu_state.render(&geometry_buffers) {
                     Ok(_) => {}
                     // Reconfigure the surface if lost
                     Err(wgpu::SurfaceError::Lost) => wgpu_state.resize(wgpu_state.size),

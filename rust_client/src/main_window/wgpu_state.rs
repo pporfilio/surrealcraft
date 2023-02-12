@@ -1,4 +1,5 @@
 use super::buffers::GeometryBuffers;
+use super::buffers::Instance;
 use super::buffers::InstanceRaw;
 use super::buffers::RawMatrix;
 use super::buffers::Vertex;
@@ -9,7 +10,6 @@ use winit::window::Window;
 
 use std::thread::sleep;
 use std::time::{Duration, Instant};
-
 pub struct Matrix4UniformInfo {
     pub buffer: wgpu::Buffer,
     pub bind_group: wgpu::BindGroup,
@@ -230,7 +230,11 @@ impl WGPUState {
         }
     }
 
-    pub fn update(&mut self, view_proj_matrix: cgmath::Matrix4<f32>) {
+    pub fn update(
+        &mut self,
+        view_proj_matrix: cgmath::Matrix4<f32>,
+        geometry: &Vec<GeometryBuffers>,
+    ) {
         // Apparently the usual way to do this is to create a separate buffer known
         // as a "staging buffer" and then copy into the camera_uniform.buffer so that
         // camera_uniform.buffer is only accessible by the gpu.
@@ -239,6 +243,14 @@ impl WGPUState {
             0,
             bytemuck::cast_slice(&[RawMatrix::new(view_proj_matrix)]),
         );
+
+        for g in geometry {
+            self.queue.write_buffer(
+                &g.instance_buffer,
+                0,
+                bytemuck::cast_slice(&g.instance_data),
+            );
+        }
     }
 
     pub fn render(&mut self, geometry: &Vec<GeometryBuffers>) -> Result<(), wgpu::SurfaceError> {
