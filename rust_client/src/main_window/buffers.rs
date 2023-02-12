@@ -1,3 +1,5 @@
+use cgmath::Rotation3;
+
 pub struct GeometryBuffers {
     pub vertex_buffer: wgpu::Buffer,
     pub index_buffer: wgpu::Buffer,
@@ -94,6 +96,13 @@ impl Instance {
             model: (cgmath::Matrix4::from_translation(self.position)
                 * cgmath::Matrix4::from(self.rotation))
             .into(),
+        }
+    }
+
+    pub fn new() -> Self {
+        Self {
+            position: cgmath::Vector3::new(0.0, 0.0, 0.0),
+            rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
         }
     }
 }

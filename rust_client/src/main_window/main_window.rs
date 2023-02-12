@@ -77,15 +77,12 @@ pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
     //     voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
     //         .unwrap();
 
-    let vd = voxel_test_geometry();
+    // let vd = voxel_test_geometry();
 
-    let voxel_mesh = triangles_from_voxel_data(&vd);
+    // let voxel_mesh = triangles_from_voxel_data(&vd);
 
-    let mut voxel_instances: Vec<Instance> = Vec::new();
-    voxel_instances.push(Instance {
-        position: cgmath::Vector3::new(0.0, 0.0, 0.0),
-        rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
-    });
+    // let mut voxel_instances: Vec<Instance> = Vec::new();
+    // voxel_instances.push(Instance::new());
 
     // let tm = read_obj(
     //     "C:\\Users\\parker\\Downloads\\coordinate_probe.obj",
@@ -93,9 +90,11 @@ pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
     // )
     // .unwrap();
 
-    // let tm = collision_mesh_1();
+    let collision_mesh = collision_mesh_1();
+    let mut collision_mesh_instances: Vec<Instance> = Vec::new();
+    collision_mesh_instances.push(Instance::new());
 
-    // let tm = collision_mesh_2();
+    // let collision_mesh = collision_mesh_2();
 
     let unit_sphere_mesh = read_obj(
         "resources/unit_sphere.obj",
@@ -104,14 +103,15 @@ pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
     .unwrap();
 
     let mut unit_sphere_instances: Vec<Instance> = Vec::new();
-    for x in 0..10 {
-        for z in 0..10 {
-            unit_sphere_instances.push(Instance {
-                position: cgmath::Vector3::new((x * 2) as f32, 0.0, (z * 2) as f32),
-                rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
-            })
-        }
-    }
+    unit_sphere_instances.push(Instance::new());
+    // for x in 0..10 {
+    //     for z in 0..10 {
+    //         unit_sphere_instances.push(Instance {
+    //             position: cgmath::Vector3::new((x * 2) as f32, 0.0, (z * 2) as f32),
+    //             rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
+    //         })
+    //     }
+    // }
 
     let mut result: Vec<GeometryBuffers> = Vec::new();
     result.push(geometry_buffers_from_mesh(
@@ -122,9 +122,15 @@ pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
 
     result.push(geometry_buffers_from_mesh(
         device,
-        &voxel_mesh,
-        &voxel_instances,
+        &collision_mesh,
+        &collision_mesh_instances,
     ));
+
+    // result.push(geometry_buffers_from_mesh(
+    //     device,
+    //     &voxel_mesh,
+    //     &voxel_instances,
+    // ));
 
     result
 }
@@ -199,7 +205,11 @@ pub fn handle_input(event: &WindowEvent, window: &window::Window, input_state: &
                 // println!("Cursor still centered");
             } else {
                 // println!("Delta Y: {:?}", delta_y);
-                input_state.add_mouse_delta(delta_x, delta_y);
+                if !input_state.is_first_mouse_event() {
+                    input_state.add_mouse_delta(delta_x, delta_y);
+                } else {
+                    input_state.set_is_first_mouse_event(false);
+                }
                 // println!("scale factor: {:?}", window.scale_factor());
                 let new_x = w * scale / 2.0;
                 let new_y = h * scale / 2.0;
@@ -209,6 +219,11 @@ pub fn handle_input(event: &WindowEvent, window: &window::Window, input_state: &
                 {
                     println!("Error centering cursor position: {:?}", err);
                 }
+            }
+        }
+        WindowEvent::Focused(focused) => {
+            if !focused {
+                input_state.set_is_first_mouse_event(true);
             }
         }
         _ => (),

@@ -8,6 +8,7 @@ pub struct InputState {
     mouse_position_set: bool,
     mouse_delta: cgmath::Vector2<f32>,
     scroll_angle_delta: f32,
+    mouse_first_event: bool,
 }
 
 impl InputState {
@@ -26,6 +27,7 @@ impl InputState {
             mouse_position_set: false,
             mouse_delta,
             scroll_angle_delta: 0.0,
+            mouse_first_event: true,
         }
     }
 
@@ -75,5 +77,13 @@ impl InputState {
         self.mouse_delta.x = 0.0;
         self.mouse_delta.y = 0.0;
         self.mouse_position_set = false;
+    }
+
+    pub fn is_first_mouse_event(&mut self) -> bool {
+        self.mouse_first_event
+    }
+
+    pub fn set_is_first_mouse_event(&mut self, is_first_move: bool) {
+        self.mouse_first_event = is_first_move;
     }
 }
