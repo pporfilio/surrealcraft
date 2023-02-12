@@ -21,37 +21,13 @@ use winit::{
 
 use super::super::game::camera::Camera;
 
-pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
-    // TODO: WASM
-    // can't load files from disk in a web browser. They describe a webserver approach
-    // here: https://sotrh.github.io/learn-wgpu/beginner/tutorial9-models/#accessing-files-from-wasm
-
-    // let vd =
-    //     voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
-    //         .unwrap();
-
-    // let vd = voxel_test_geometry();
-
-    // let tm = triangles_from_voxel_data(&vd);
-
-    // let tm = read_obj(
-    //     "C:\\Users\\parker\\Downloads\\coordinate_probe.obj",
-    //     cgmath::Vector3::new(0.2, 0.3, 0.4),
-    // )
-    // .unwrap();
-
-    // let tm = collision_mesh_1();
-
-    let tm = read_obj(
-        "resources/unit_sphere.obj",
-        cgmath::Vector3::new(0.2, 0.3, 0.4),
-    )
-    .unwrap();
-
-    // let tm = collision_mesh_2();
-
+pub fn geometry_buffers_from_mesh(
+    device: &wgpu::Device,
+    mesh: &TriangleMesh,
+    instances: &Vec<Instance>,
+) -> GeometryBuffers {
     let mut vertex_data: Vec<f32> = Vec::new();
-    for (position, color) in tm.vertices.iter().zip(tm.colors) {
+    for (position, color) in mesh.vertices.iter().zip(mesh.colors.iter()) {
         vertex_data.push(position.x);
         vertex_data.push(position.y);
         vertex_data.push(position.z);
@@ -71,19 +47,9 @@ pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
 
     let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
         label: Some("Index Buffer"),
-        contents: bytemuck::cast_slice(&tm.indices[..]),
+        contents: bytemuck::cast_slice(&mesh.indices[..]),
         usage: wgpu::BufferUsages::INDEX,
     });
-
-    let mut instances: Vec<Instance> = Vec::new();
-    for x in 0..10 {
-        for z in 0..10 {
-            instances.push(Instance {
-                position: cgmath::Vector3::new((x * 2) as f32, 0.0, (z * 2) as f32),
-                rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
-            })
-        }
-    }
 
     let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
     let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -92,14 +58,75 @@ pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
         usage: wgpu::BufferUsages::VERTEX,
     });
 
-    vec![GeometryBuffers {
+    GeometryBuffers {
         vertex_buffer,
         index_buffer,
-        vertex_count: tm.vertices.len() as u32,
-        index_count: tm.indices.len() as u32,
+        vertex_count: mesh.vertices.len() as u32,
+        index_count: mesh.indices.len() as u32,
         instance_buffer,
         instance_count: instances.len() as u32,
-    }]
+    }
+}
+
+pub fn initialize_geometry(device: &wgpu::Device) -> Vec<GeometryBuffers> {
+    // TODO: WASM
+    // can't load files from disk in a web browser. They describe a webserver approach
+    // here: https://sotrh.github.io/learn-wgpu/beginner/tutorial9-models/#accessing-files-from-wasm
+
+    // let vd =
+    //     voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
+    //         .unwrap();
+
+    let vd = voxel_test_geometry();
+
+    let voxel_mesh = triangles_from_voxel_data(&vd);
+
+    let mut voxel_instances: Vec<Instance> = Vec::new();
+    voxel_instances.push(Instance {
+        position: cgmath::Vector3::new(0.0, 0.0, 0.0),
+        rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
+    });
+
+    // let tm = read_obj(
+    //     "C:\\Users\\parker\\Downloads\\coordinate_probe.obj",
+    //     cgmath::Vector3::new(0.2, 0.3, 0.4),
+    // )
+    // .unwrap();
+
+    // let tm = collision_mesh_1();
+
+    // let tm = collision_mesh_2();
+
+    let unit_sphere_mesh = read_obj(
+        "resources/unit_sphere.obj",
+        cgmath::Vector3::new(0.2, 0.3, 0.4),
+    )
+    .unwrap();
+
+    let mut unit_sphere_instances: Vec<Instance> = Vec::new();
+    for x in 0..10 {
+        for z in 0..10 {
+            unit_sphere_instances.push(Instance {
+                position: cgmath::Vector3::new((x * 2) as f32, 0.0, (z * 2) as f32),
+                rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
+            })
+        }
+    }
+
+    let mut result: Vec<GeometryBuffers> = Vec::new();
+    result.push(geometry_buffers_from_mesh(
+        device,
+        &unit_sphere_mesh,
+        &unit_sphere_instances,
+    ));
+
+    result.push(geometry_buffers_from_mesh(
+        device,
+        &voxel_mesh,
+        &voxel_instances,
+    ));
+
+    result
 }
 
 pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
