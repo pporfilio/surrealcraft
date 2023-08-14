@@ -36,7 +36,7 @@ pub fn collision_mesh_1() -> TriangleMesh {
     let color = cgmath::Vector3::new(115.0 / 255.0, 147.0 / 255.0, 179.0 / 255.0);
     let mut tm = TriangleMesh::new(200, 200);
 
-    // Square at x = 5 facing toward origin
+    // Square at x = 5 facing toward origin, with a slight tilt
     tm.vertices.push(cgmath::Vector3::new(5.5, 2.0, 1.8));
     tm.vertices.push(cgmath::Vector3::new(5.5, 2.0, -1.8));
     tm.vertices.push(cgmath::Vector3::new(4.5, -2.0, 2.0));
@@ -701,6 +701,8 @@ pub fn move_sphere_with_collision(
 
 #[cfg(test)]
 mod tests {
+    use cgmath::vec3;
+
     use super::*;
 
     static COLLIDE_EPS: f32 = 0.00001;
@@ -721,6 +723,31 @@ mod tests {
         assert_eq_eps_f32(v1.x, v2.x, eps);
         assert_eq_eps_f32(v1.y, v2.y, eps);
         assert_eq_eps_f32(v1.z, v2.z, eps);
+    }
+
+    pub fn collision_plane() -> TriangleMesh {
+        let color = cgmath::Vector3::new(115.0 / 255.0, 147.0 / 255.0, 179.0 / 255.0);
+        let mut tm = TriangleMesh::new(200, 200);
+
+        // Square at x = 5 facing toward origin, with a slight tilt
+        tm.vertices.push(cgmath::Vector3::new(5.5, 2.0, 1.8));
+        tm.vertices.push(cgmath::Vector3::new(5.5, 2.0, -1.8));
+        tm.vertices.push(cgmath::Vector3::new(4.5, -2.0, 2.0));
+        tm.vertices.push(cgmath::Vector3::new(4.5, -2.0, -2.0));
+
+        tm.indices.push(0);
+        tm.indices.push(1);
+        tm.indices.push(3);
+
+        tm.indices.push(3);
+        tm.indices.push(2);
+        tm.indices.push(0);
+
+        for _ in 0..4 {
+            tm.colors.push(color);
+        }
+
+        tm
     }
 
     #[test]
@@ -1184,5 +1211,40 @@ mod tests {
             cgmath::Vector3::new(3.1, 3.5, 0.0),
             cgmath::Vector3::new(3.1, 0.0, 0.0),
         );
+    }
+
+    #[rustfmt::skip]
+    #[test]
+    fn collision_regression_1() {
+        // Set up I used for tracking down a bug where edge collisions weren't working.
+        // Once the collision looked good I recorded values and added them to this test.
+        // This is a regression test and I haven't checked if the values are
+        // mathematically correct.
+        let collision_mesh = collision_plane();
+        let move_step = vec3(0.1, 0.0, 0.0);
+
+        for (sphere_start, expected_sphere_end, expected_attempts, expected_finished_move) in vec![
+            (vec3(3.7999985, 0.0, 0.0), vec3(3.8999984, 0.0, 0.0), 0, true),
+            // first that collides with the plane
+            (vec3(3.8999984, 0.0, 0.0), vec3(3.9710326, 0.007241085, 0.0), 1, true),
+            (vec3(3.9710326, 0.007241085, 0.0), vec3(3.9769151, 0.030770198, 0.0), 1, true),
+            (vec3(4.035738, 0.26606178, 0.0), vec3(4.0416203, 0.28959095, 0.0), 1, true),
+            (vec3(4.5298486, 2.2425046, 0.0), vec3(4.535731, 2.2660336, 0.0), 1, true),
+            // First that slides off the edge of the plane
+            (vec3(4.535731, 2.2660336, 0.0), vec3(4.5430913, 2.2916, 0.0), 1, true),
+            (vec3(4.5430913, 2.2916, 0.0), vec3(4.55193, 2.31939, 0.0), 1, true),
+            (vec3(4.55193, 2.31939, 0.0), vec3(4.562531, 2.349521, 0.0), 1, true),
+            // last one sliding against the edge of the plane
+            (vec3(5.336884, 2.9901068, 0.0), vec3(5.435363, 3.000832, 0.0), 1, true),
+            // no longer colliding with plane
+            (vec3(5.435363, 3.000832, 0.0), vec3(5.5353627, 3.000832, 0.0), 0, true)
+        ] {
+            let (new_location, attempts, finished_move) =
+                move_sphere_with_collision(sphere_start, move_step, &collision_mesh);
+
+            assert_vector_eq_eps_f32(new_location, expected_sphere_end, COLLIDE_EPS);
+            assert_eq!(attempts, expected_attempts);
+            assert_eq!(finished_move, expected_finished_move);
+        }
     }
 }
