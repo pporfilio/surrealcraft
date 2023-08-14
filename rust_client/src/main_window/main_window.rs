@@ -334,7 +334,7 @@ pub fn update_game_state(
         camera.set_yaw_deg(0.0);
     }
 
-    if input_state.key_pressed(&VirtualKeyCode::Space) {
+    if input_state.consume_key_pressed(&VirtualKeyCode::Space) {
         let (new_location, attempts, finished_move) = move_sphere_with_collision(
             entities[0].instances[0].position,
             // cgmath::Vector3::new(0.1, 0.0, -0.1),

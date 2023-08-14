@@ -35,6 +35,20 @@ impl InputState {
         self.keys_pressed.get(key).copied().unwrap_or(false)
     }
 
+    /// Quick hack to be able to step through collisions while debugging.
+    /// returns if key is pressed, then clears pressed state so that next
+    /// read will return false until we get another key press event
+    /// unfortunately, windows repeatedly sends a key press event for a
+    /// key that's held down, but there's enough of a delay that this is still
+    /// useful and you can physically press and release a key fast enough to only
+    /// get 1 press event, which means the key doesn't stay pressed for multiple
+    /// frames in a row.
+    pub fn consume_key_pressed(&mut self, key: &VirtualKeyCode) -> bool {
+        let pressed = self.key_pressed(key);
+        self.set_key_released(key);
+        pressed
+    }
+
     pub fn mouse_button_pressed(&self, button: &MouseButton) -> bool {
         self.mouse_buttons_pressed
             .get(button)

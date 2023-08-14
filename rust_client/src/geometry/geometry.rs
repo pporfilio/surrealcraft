@@ -275,6 +275,8 @@ pub fn intersect_plane(
         signed_distance
     );
 
+    // If denominator is 0, then the sphere is moving perpendicular to the plane,
+    // so it will never cross.
     if denom.abs() < 0.00001 {
         if signed_distance < 1.0 {
             return (
@@ -293,6 +295,8 @@ pub fn intersect_plane(
         }
     }
 
+    // Otherwise, the sphere crosses the plane at some point, in the past
+    // or future. Find the time when it starts and stops intersecting the plane.
     let t0 = (1.0 - signed_distance) / denom;
     let t1 = (-1.0 - signed_distance) / denom;
 
@@ -513,12 +517,24 @@ pub fn collide_triangle(
         t0, t1, plane_intersection_point, status
     );
 
-    if status == IntersectionStatus::Crosses && t0 >= 0.0 && t0 <= 1.0 {
-        // If the first place we touch this plane is inside the triangle, then that's
-        // the earliest collision and we don't have to check edges and vertices.
+    if status == IntersectionStatus::Crosses {
+        // If we intersect the plane during this move, check if we're inside the triangle
+        //
+        // I think there might be an optimization where we don't have to check the
+        // triangle if we start intersecting the plane outside this time step.
+        // In that case it shouldn't be in the triangle because
+        // then it would have been in the triangle at the end of the last step.
+        // So that means the first intersection point is outside the triangle, but
+        // we still might bump into an edge or vertex of the triangle during this time
+        // step because that can happen after intersecting the plane.
+        // if t0 >= 0.0 && t0 <= 1.0 {
         if point_in_triangle(plane_intersection_point, tp1, tp2, tp3) {
+            // If the first place we touch this plane is inside the triangle, then that's
+            // the earliest collision and we don't have to check edges and vertices.
+            println!("Collision point was in triangle, returning t0: {:?}, plane_intersection_point: {:?}, collision: true", t0, plane_intersection_point);
             return (t0, plane_intersection_point, true);
         }
+        // }
 
         // If we collide with the plane but the first place on the plane we touch is
         // not inside the triangle, then we have to check if we touch an edge or vertex
@@ -623,6 +639,7 @@ pub fn move_sphere_with_collision(
     unit_sphere_velocity: cgmath::Vector3<f32>,
     mesh: &TriangleMesh,
 ) -> (cgmath::Vector3<f32>, u32, bool) {
+    println!("------------------------------------");
     let mut attempts = 0;
     let mut current_start = unit_sphere_start;
     let mut current_velocity = unit_sphere_velocity;
