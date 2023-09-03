@@ -83,28 +83,9 @@ pub fn geometry_buffers_from_mesh(
     }
 }
 
-pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
-    // TODO: WASM
-    // can't load files from disk in a web browser. They describe a webserver approach
-    // here: https://sotrh.github.io/learn-wgpu/beginner/tutorial9-models/#accessing-files-from-wasm
-
-    // let vd =
-    //     voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
-    //         .unwrap();
-
-    // let vd = voxel_test_geometry();
-
-    // let voxel_mesh = triangles_from_voxel_data(&vd);
-
-    // let mut voxel_instances: Vec<Instance> = Vec::new();
-    // voxel_instances.push(Instance::new());
-
-    // let tm = read_obj(
-    //     "C:\\Users\\parker\\Downloads\\coordinate_probe.obj",
-    //     cgmath::Vector3::new(0.2, 0.3, 0.4),
-    // )
-    // .unwrap();
-
+pub fn initialize_collision_test(
+    device: &wgpu::Device,
+) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
     //let collision_mesh = collision_mesh_2();
     let collision_mesh = collision_mesh_1();
     let mut collision_mesh_instances: Vec<Instance> = Vec::new();
@@ -155,13 +136,70 @@ pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<Geo
         instances: collision_mesh_instances,
     });
 
-    // result.push(geometry_buffers_from_mesh(
-    //     device,
-    //     &voxel_mesh,
-    //     &voxel_instances,
-    // ));
+    (entities, geometry_buffers)
+}
+
+pub fn initialize_voxel_scene(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
+    let vd =
+        voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
+            .unwrap();
+
+    // let vd = voxel_test_geometry();
+
+    let mut entities: Vec<RenderEntity> = Vec::new();
+    let mut geometry_buffers: Vec<GeometryBuffers> = Vec::new();
+
+    let voxel_mesh = triangles_from_voxel_data(&vd);
+
+    let mut voxel_instances: Vec<Instance> = Vec::new();
+    voxel_instances.push(Instance::new());
+
+    geometry_buffers.push(geometry_buffers_from_mesh(
+        device,
+        &voxel_mesh,
+        &voxel_instances,
+    ));
+    entities.push(RenderEntity {
+        mesh: voxel_mesh,
+        instances: voxel_instances,
+    });
 
     (entities, geometry_buffers)
+}
+
+pub fn initialize_coordinate_probe(
+    device: &wgpu::Device,
+) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
+    let tm = read_obj(
+        "C:\\source\\surrealcraft\\terrain_generation\\coordinate_probe\\coordinate_probe.obj",
+        cgmath::Vector3::new(0.2, 0.3, 0.4),
+    )
+    .unwrap();
+
+    let mut tm_instances: Vec<Instance> = Vec::new();
+    tm_instances.push(Instance::new());
+
+    let mut entities: Vec<RenderEntity> = Vec::new();
+    let mut geometry_buffers: Vec<GeometryBuffers> = Vec::new();
+    geometry_buffers.push(geometry_buffers_from_mesh(device, &tm, &tm_instances));
+    entities.push(RenderEntity {
+        mesh: tm,
+        instances: tm_instances,
+    });
+
+    (entities, geometry_buffers)
+}
+
+pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
+    // TODO: WASM
+    // can't load files from disk in a web browser. They describe a webserver approach
+    // here: https://sotrh.github.io/learn-wgpu/beginner/tutorial9-models/#accessing-files-from-wasm
+
+    // initialize_collision_test(device)
+
+    // initialize_voxel_scene(device)
+
+    initialize_coordinate_probe(device)
 }
 
 pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
