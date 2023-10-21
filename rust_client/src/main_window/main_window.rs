@@ -260,6 +260,9 @@ pub fn handle_input(event: &WindowEvent, window: &window::Window, input_state: &
             }
         }
         WindowEvent::CursorMoved { position, .. } => {
+            // Winit docs say this should not be used for 3d camera control
+            // but don't say what should be used instead.
+            // https://docs.rs/winit/latest/winit/event/enum.WindowEvent.html#variant.CursorMoved
             let (w, h): (f32, f32) = window
                 .inner_size()
                 .to_logical::<f32>(window.scale_factor())
