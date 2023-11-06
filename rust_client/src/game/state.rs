@@ -6,6 +6,36 @@ use super::super::main_window::input_state::{InputEvent, InputState};
 use super::camera::Camera;
 use std::collections::VecDeque;
 
+// Logically, I'd like to receive the previous frame's state, make a copy,
+// edit the copy with any changes since the last frame, return the copy,
+// render the copy, pass the copy into update_game_state for the next frame.
+// In practice, I don't want to copy the data in static assets such as meshes
+// because those will be big enough to be slow.
+// But, some meshes may change frame to frame, e.g. stuff that is procedurally
+// generated over time or edited by the player.
+
+// Okay, if meshes were all static, then we have 3 things to connect:
+// - TriangleMesh that loads/defines/collides the mesh
+// - RenderEntity (to be renamed) that defines mesh "metadata", which right now
+//   is just the list of instances, which are just position and rotation info
+// - GeometryBuffers that are the buffers we send to the GPU, which include
+//   vertex/color/normal as well as instance data
+// Then we just have a map in main_window from id -> (TriangleMesh, GeometryBuffers)
+// and in SceneState we have a list of whatever the game cares about that can reference
+// the mesh/buffer pairs by id. In fact, multiple game entities can use the same mesh,
+// or we can have one game entity that has a bunch of instances of the same mesh
+
+// But probably I should get the game running again with the new input refactor before
+// refactoring the entities.
+// Probably for now I will copy the Camera and InputState but will pass entities
+// in separately and mutate them in place.
+
+// I can move them back into SceneState once I move the meshes to be referenced by id.
+
+// Still not sure how to handle meshes that need to change frame to frame, but I can
+// cross that bridge. Maybe they just aren't nicely tracked, or maybe I come up with a
+// way to diff them, or maybe I track the inputs to whatever function changes them
+// rather than tracking the changes directly...
 pub struct SceneState {
     pub camera: Camera,
     pub entities: Vec<RenderEntity>,
@@ -18,7 +48,7 @@ pub fn update_game_state(event_queue: &VecDeque<InputEvent>, state: &SceneState,
     // TODO
 
     // Initialize this update's mouse accumulator with the state of the previous frame
-    let mouse_accumulator = state.input_state.mouse_position;
+    let mouse_accumulator = state.input_state.mouse_position.clone();
     for e in event_queue {
         // If this mouse move went to the center of the window, that was us resetting
         // the cursor position. Since we reset to (0, 0) after every move, the player
@@ -36,7 +66,7 @@ pub fn update_game_state(event_queue: &VecDeque<InputEvent>, state: &SceneState,
         }
     }
     let (delta_x, delta_y, duration) =
-        mouse_accumulator.difference_from(state.input_state.mouse_position);
+        mouse_accumulator.difference_from(&state.input_state.mouse_position);
 
     // Process events to get mouse diff from last frame and current button state
 

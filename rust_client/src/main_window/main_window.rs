@@ -372,10 +372,10 @@ pub async fn run() {
                 // I ran into reference lifetime issues when I tried to store
                 // GeometryBuffers in the RenderEntity and then pull out a list of
                 // references to pass to the wgpu_state functions.
-                for entity_i in 0..entities.len() {
-                    for instance_i in 0..entities[entity_i].instances.len() {
+                for entity_i in 0..scene_state.entities.len() {
+                    for instance_i in 0..scene_state.entities[entity_i].instances.len() {
                         geometry_buffers[entity_i].instance_data[instance_i] =
-                            entities[entity_i].instances[instance_i].to_raw();
+                            scene_state.entities[entity_i].instances[instance_i].to_raw();
                     }
                 }
 

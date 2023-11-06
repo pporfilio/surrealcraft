@@ -42,6 +42,7 @@ pub struct MouseButtonState {
     pub last_transition: Option<Instant>,
 }
 
+#[derive(Clone)]
 pub struct MousePositionState {
     pub current_x: f64,
     pub current_y: f64,
@@ -57,6 +58,7 @@ pub struct InputState {
     pub mouse_position: MouseAccumulator,
 }
 
+#[derive(Clone)]
 pub struct MouseAccumulator {
     pub mouse_position: Option<MousePositionState>,
 }
@@ -66,7 +68,7 @@ impl MouseAccumulator {
         self.mouse_position = Some(prior_state);
     }
 
-    pub fn difference_from(self, other: MouseAccumulator) -> (f64, f64, Duration) {
+    pub fn difference_from(self, other: &MouseAccumulator) -> (f64, f64, Duration) {
         match (self.mouse_position, other.mouse_position) {
             (Some(s), Some(o)) => {
                 let mut duration = Duration::ZERO;
@@ -88,7 +90,7 @@ impl MouseAccumulator {
         }
     }
 
-    pub fn apply_mouse_move(self, event: &MouseMoveEvent) {
+    pub fn apply_mouse_move(&self, event: &MouseMoveEvent) {
         match self.mouse_position {
             Some(mouse) => {
                 mouse.previous_x = Some(mouse.current_x);
