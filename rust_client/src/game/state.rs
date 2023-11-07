@@ -38,17 +38,21 @@ use std::collections::VecDeque;
 // rather than tracking the changes directly...
 pub struct SceneState {
     pub camera: Camera,
-    pub entities: Vec<RenderEntity>,
     pub input_state: InputState,
 }
 
-pub fn update_game_state(event_queue: &VecDeque<InputEvent>, state: &SceneState, delta_s: f32) {
+pub fn update_game_state(
+    event_queue: &VecDeque<InputEvent>,
+    state: &SceneState,
+    entities_fixme: &Vec<RenderEntity>,
+    delta_s: f32,
+) {
     // state should be the output from the last call to this `update` function
 
     // TODO
 
     // Initialize this update's mouse accumulator with the state of the previous frame
-    let mouse_accumulator = state.input_state.mouse_position.clone();
+    let mut mouse_accumulator = state.input_state.mouse_position.clone();
     for e in event_queue {
         // If this mouse move went to the center of the window, that was us resetting
         // the cursor position. Since we reset to (0, 0) after every move, the player
@@ -71,7 +75,7 @@ pub fn update_game_state(event_queue: &VecDeque<InputEvent>, state: &SceneState,
     // Process events to get mouse diff from last frame and current button state
 
     // use this updated input state to update the camera state
-    state.input_state.mouse_position = mouse_accumulator;
+    //state.input_state.mouse_position = mouse_accumulator;
 
     // return new_state;
 }

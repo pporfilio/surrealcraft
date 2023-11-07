@@ -69,7 +69,7 @@ impl MouseAccumulator {
     }
 
     pub fn difference_from(self, other: &MouseAccumulator) -> (f64, f64, Duration) {
-        match (self.mouse_position, other.mouse_position) {
+        match (self.mouse_position, &other.mouse_position) {
             (Some(s), Some(o)) => {
                 let mut duration = Duration::ZERO;
                 match (s.current_timestamp, o.current_timestamp) {
@@ -90,8 +90,8 @@ impl MouseAccumulator {
         }
     }
 
-    pub fn apply_mouse_move(&self, event: &MouseMoveEvent) {
-        match self.mouse_position {
+    pub fn apply_mouse_move(&mut self, event: &MouseMoveEvent) {
+        match &mut self.mouse_position {
             Some(mouse) => {
                 mouse.previous_x = Some(mouse.current_x);
                 mouse.previous_y = Some(mouse.current_y);
