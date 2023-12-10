@@ -1,5 +1,6 @@
 use std::f32::consts::PI;
 
+#[derive(Clone)]
 pub struct Camera {
     position: cgmath::Vector3<f32>,
     pitch_rad: f32,

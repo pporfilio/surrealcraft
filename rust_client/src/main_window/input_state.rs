@@ -20,8 +20,8 @@ pub struct MouseButtonEvent {
     pub timestamp: Instant,
 }
 pub struct MouseMoveEvent {
-    pub position_x: f64,
-    pub position_y: f64,
+    pub delta_x: f64,
+    pub delta_y: f64,
     pub timestamp: Instant,
 }
 
@@ -30,12 +30,14 @@ pub struct FocusEvent {
     pub timestamp: Instant,
 }
 
+#[derive(Clone)]
 pub struct KeyButtonState {
     pub logical_button: VirtualKeyCode,
     pub is_pressed: bool,
     pub last_transition: Option<Instant>,
 }
 
+#[derive(Clone)]
 pub struct MouseButtonState {
     pub logical_button: MouseButton,
     pub is_pressed: bool,
@@ -52,6 +54,7 @@ pub struct MousePositionState {
     pub previous_timestamp: Option<Instant>,
 }
 
+#[derive(Clone)]
 pub struct InputState {
     pub key_buttons: HashMap<VirtualKeyCode, KeyButtonState>,
     pub mouse_buttons: HashMap<MouseButton, MouseButtonState>,
@@ -68,8 +71,8 @@ impl MouseAccumulator {
         self.mouse_position = Some(prior_state);
     }
 
-    pub fn difference_from(self, other: &MouseAccumulator) -> (f64, f64, Duration) {
-        match (self.mouse_position, &other.mouse_position) {
+    pub fn difference_from(&self, other: &MouseAccumulator) -> (f64, f64, Duration) {
+        match (&self.mouse_position, &other.mouse_position) {
             (Some(s), Some(o)) => {
                 let mut duration = Duration::ZERO;
                 match (s.current_timestamp, o.current_timestamp) {
@@ -95,15 +98,15 @@ impl MouseAccumulator {
             Some(mouse) => {
                 mouse.previous_x = Some(mouse.current_x);
                 mouse.previous_y = Some(mouse.current_y);
-                mouse.current_x = event.position_x;
-                mouse.current_y = event.position_y;
+                mouse.current_x += event.delta_x;
+                mouse.current_y += event.delta_y;
                 mouse.previous_timestamp = mouse.current_timestamp;
                 mouse.current_timestamp = Some(event.timestamp);
             }
             None => {
                 self.mouse_position = Some(MousePositionState {
-                    current_x: event.position_x,
-                    current_y: event.position_y,
+                    current_x: event.delta_x,
+                    current_y: event.delta_y,
                     previous_x: None,
                     previous_y: None,
                     current_timestamp: Some(event.timestamp),
@@ -115,7 +118,7 @@ impl MouseAccumulator {
 }
 
 impl InputState {
-    pub fn apply_event(mut self, event: InputEvent) {
+    pub fn apply_event(&mut self, event: &InputEvent) {
         match event {
             InputEvent::KeyButtonEvent(KeyButtonEvent {
                 logical_button,
@@ -126,16 +129,16 @@ impl InputState {
                 // and if that key exists, modify it in-place [and_modify()]
                 // or if the key doesn't exist, create a new entry [or_insert()]
                 self.key_buttons
-                    .entry(logical_button)
+                    .entry(*logical_button)
                     .and_modify(|entry| {
-                        if is_pressed != entry.is_pressed {
-                            entry.is_pressed = is_pressed;
-                            entry.last_transition = Some(timestamp);
+                        if *is_pressed != entry.is_pressed {
+                            entry.is_pressed = *is_pressed;
+                            entry.last_transition = Some(*timestamp);
                         }
                     })
                     .or_insert(KeyButtonState {
-                        logical_button: logical_button,
-                        is_pressed: is_pressed,
+                        logical_button: *logical_button,
+                        is_pressed: *is_pressed,
                         last_transition: None,
                     });
             }
@@ -148,16 +151,16 @@ impl InputState {
                 // the name of the map and the type of logical_button. There should
                 // be a way to factor it out.
                 self.mouse_buttons
-                    .entry(logical_button)
+                    .entry(*logical_button)
                     .and_modify(|entry| {
-                        if is_pressed != entry.is_pressed {
-                            entry.is_pressed = is_pressed;
-                            entry.last_transition = Some(timestamp);
+                        if *is_pressed != entry.is_pressed {
+                            entry.is_pressed = *is_pressed;
+                            entry.last_transition = Some(*timestamp);
                         }
                     })
                     .or_insert(MouseButtonState {
-                        logical_button: logical_button,
-                        is_pressed: is_pressed,
+                        logical_button: *logical_button,
+                        is_pressed: *is_pressed,
                         last_transition: None,
                     });
             }

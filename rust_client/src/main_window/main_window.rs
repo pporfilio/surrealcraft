@@ -263,17 +263,24 @@ pub fn handle_input(
             // let delta_x = position.x as f32 / scale - w / 2.0;
             // let delta_y = position.y as f32 / scale - h / 2.0;
 
-            event_queue.push_back(InputEvent::MouseMoveEvent(MouseMoveEvent {
-                position_x: position.x as f64 / scale as f64,
-                position_y: position.y as f64 / scale as f64,
-                timestamp: Instant::now(),
-            }));
+            // Only record mouse move events if the move was away from the origin
+            // Since we reset to the origin after every move.
+            let delta_x = position.x as f64 / scale as f64 - w as f64 / 2.0;
+            let delta_y = position.y as f64 / scale as f64 - h as f64 / 2.0;
 
-            if let Err(err) = window.set_cursor_position(winit::dpi::PhysicalPosition::new(
-                w * scale / 2.0,
-                h * scale / 2.0,
-            )) {
-                println!("Error centering cursor position: {:?}", err);
+            if !(delta_x == 0.0 && delta_y == 0.0) {
+                event_queue.push_back(InputEvent::MouseMoveEvent(MouseMoveEvent {
+                    delta_x,
+                    delta_y,
+                    timestamp: Instant::now(),
+                }));
+
+                if let Err(err) = window.set_cursor_position(winit::dpi::PhysicalPosition::new(
+                    w * scale / 2.0,
+                    h * scale / 2.0,
+                )) {
+                    println!("Error centering cursor position: {:?}", err);
+                }
             }
 
             // // println!("w: {:?} h: {:?}", w, h);
@@ -322,7 +329,7 @@ pub async fn run() {
 
     let mut prev_loop_instant = Instant::now();
 
-    let scene_state = SceneState {
+    let mut scene_state = SceneState {
         camera: camera,
         input_state: InputState {
             key_buttons: HashMap::new(),
@@ -350,7 +357,8 @@ pub async fn run() {
                 // println!("{:?}", delta_s);
                 prev_loop_instant = current_loop_instant;
 
-                update_game_state(&mut event_queue, &scene_state, &entities, delta_s);
+                scene_state = update_game_state(&mut event_queue, &scene_state, &entities, delta_s);
+                event_queue.clear();
 
                 // println!(
                 //     "Camera yaw: {:?} pitch: {:?} position: {:?} look: {:?}",
