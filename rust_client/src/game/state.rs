@@ -1,3 +1,6 @@
+use crate::main_window::input_state::KeyButtonState;
+use cgmath::InnerSpace;
+
 // TODO: ugh input_state should probalby not be in main_window
 // maybe we should be in like interface_layer or something at the
 // same level as game, geometry, and main_window
@@ -5,6 +8,7 @@ use super::super::main_window::buffers::RenderEntity;
 use super::super::main_window::input_state::{InputEvent, InputState};
 use super::camera::Camera;
 use std::collections::VecDeque;
+use winit::event::VirtualKeyCode;
 
 // Logically, I'd like to receive the previous frame's state, make a copy,
 // edit the copy with any changes since the last frame, return the copy,
@@ -56,17 +60,7 @@ pub fn update_game_state(
 
     // Process events to get mouse diff from last frame and current button state
     for e in event_queue {
-        // If this mouse move went to the center of the window, that was us resetting
-        // the cursor position. Since we reset to (0, 0) after every move, the player
-        // should never be able to move to that location/moving to that location is a
-        // 0-distance move.
-        match e {
-            InputEvent::MouseMoveEvent(mouse_move_event) => {
-                new_input_state.apply_event(e);
-            }
-            // TODO: apply key and mouse button events too!
-            _ => {}
-        }
+        new_input_state.apply_event(e);
     }
 
     // For now I just want the total mouse movement during the frame, so compare
@@ -85,11 +79,22 @@ pub fn update_game_state(
 
     //     input_state.clear_mouse_delta();
 
-    //     if input_state.key_pressed(&VirtualKeyCode::R) {
-    //         camera.set_position(cgmath::Vector3::new(0.0, 0.0, 0.0));
-    //         camera.set_pitch_deg(0.0);
-    //         camera.set_yaw_deg(0.0);
-    //     }
+    match new_input_state.key_buttons.get(&VirtualKeyCode::R) {
+        Some(KeyButtonState {
+            is_pressed: true, .. // .. means the other fields don't matter
+        }) => {
+            new_camera.set_position(cgmath::Vector3::new(0.0, 0.0, 0.0));
+            new_camera.set_pitch_deg(0.0);
+            new_camera.set_yaw_deg(0.0);
+        }
+        _ => {}
+    }
+
+    new_camera.add_position_delta(get_camera_position_delta(
+        &new_camera,
+        &new_input_state,
+        delta_s,
+    ));
 
     //     if input_state.consume_key_pressed(&VirtualKeyCode::Space) {
     //         let (new_location, attempts, finished_move) = move_sphere_with_collision(
@@ -109,41 +114,41 @@ pub fn update_game_state(
     }
 }
 
-// pub fn get_camera_position_delta(
-//     camera: &Camera,
-//     input_state: &InputState,
-//     delta_s: f32,
-// ) -> cgmath::Vector3<f32> {
-//     let mut delta_forward: f32 = 0.0;
-//     let mut delta_up: f32 = 0.0;
-//     let mut delta_right: f32 = 0.0;
-//     if input_state.key_pressed(&VirtualKeyCode::W) || input_state.key_pressed(&VirtualKeyCode::Up) {
-//         delta_forward += delta_s;
-//     }
-//     if input_state.key_pressed(&VirtualKeyCode::S) || input_state.key_pressed(&VirtualKeyCode::Down)
-//     {
-//         delta_forward -= delta_s;
-//     }
-//     if input_state.key_pressed(&VirtualKeyCode::D)
-//         || input_state.key_pressed(&VirtualKeyCode::Right)
-//     {
-//         delta_right += delta_s;
-//     }
-//     if input_state.key_pressed(&VirtualKeyCode::A) || input_state.key_pressed(&VirtualKeyCode::Left)
-//     {
-//         delta_right -= delta_s;
-//     }
-//     if input_state.key_pressed(&VirtualKeyCode::Q) {
-//         delta_up += delta_s;
-//     }
-//     if input_state.key_pressed(&VirtualKeyCode::E) {
-//         delta_up -= delta_s;
-//     }
+pub fn get_camera_position_delta(
+    camera: &Camera,
+    input_state: &InputState,
+    delta_s: f32,
+) -> cgmath::Vector3<f32> {
+    let mut delta_forward: f32 = 0.0;
+    let mut delta_up: f32 = 0.0;
+    let mut delta_right: f32 = 0.0;
+    if input_state.key_pressed(&VirtualKeyCode::W) || input_state.key_pressed(&VirtualKeyCode::Up) {
+        delta_forward += delta_s;
+    }
+    if input_state.key_pressed(&VirtualKeyCode::S) || input_state.key_pressed(&VirtualKeyCode::Down)
+    {
+        delta_forward -= delta_s;
+    }
+    if input_state.key_pressed(&VirtualKeyCode::D)
+        || input_state.key_pressed(&VirtualKeyCode::Right)
+    {
+        delta_right += delta_s;
+    }
+    if input_state.key_pressed(&VirtualKeyCode::A) || input_state.key_pressed(&VirtualKeyCode::Left)
+    {
+        delta_right -= delta_s;
+    }
+    if input_state.key_pressed(&VirtualKeyCode::Q) {
+        delta_up += delta_s;
+    }
+    if input_state.key_pressed(&VirtualKeyCode::E) {
+        delta_up -= delta_s;
+    }
 
-//     delta_forward * camera.look_vector()
-//         + delta_up * camera.up_vector()
-//         + delta_right * camera.look_vector().cross(camera.up_vector()).normalize()
-// }
+    delta_forward * camera.look_vector()
+        + delta_up * camera.up_vector()
+        + delta_right * camera.look_vector().cross(camera.up_vector()).normalize()
+}
 
 // Next things:
 // move geometry initialization functions out of main_window.rs

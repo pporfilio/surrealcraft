@@ -118,6 +118,17 @@ impl MouseAccumulator {
 }
 
 impl InputState {
+    pub fn key_pressed(&self, key: &VirtualKeyCode) -> bool {
+        match self.key_buttons.get(key) {
+            Some(KeyButtonState {
+                is_pressed: true, .. // .. means the other fields don't matter
+            }) => {
+                return true
+            },
+            _ => { return false }
+        }
+    }
+
     pub fn apply_event(&mut self, event: &InputEvent) {
         match event {
             InputEvent::KeyButtonEvent(KeyButtonEvent {

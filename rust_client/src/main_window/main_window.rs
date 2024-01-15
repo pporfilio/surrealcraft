@@ -268,6 +268,9 @@ pub fn handle_input(
             let delta_x = position.x as f64 / scale as f64 - w as f64 / 2.0;
             let delta_y = position.y as f64 / scale as f64 - h as f64 / 2.0;
 
+            // I had trouble getting this to work in update_game_state, so reset the
+            // mouse to (0, 0) here and only enqueue the event if the event was not
+            // the move back to (0, 0)
             if !(delta_x == 0.0 && delta_y == 0.0) {
                 event_queue.push_back(InputEvent::MouseMoveEvent(MouseMoveEvent {
                     delta_x,
