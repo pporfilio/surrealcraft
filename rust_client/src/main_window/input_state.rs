@@ -1,103 +1,225 @@
-use cgmath::Point2;
 use std::collections::HashMap;
-use winit::event::{MouseButton, VirtualKeyCode};
+use std::time::{Duration, Instant};
+use winit::event::{KeyboardInput, MouseButton, VirtualKeyCode};
 
-pub struct InputState {
-    keys_pressed: HashMap<VirtualKeyCode, bool>,
-    mouse_buttons_pressed: HashMap<MouseButton, bool>,
-    mouse_position_set: bool,
-    mouse_delta: cgmath::Vector2<f32>,
-    scroll_angle_delta: f32,
-    mouse_first_event: bool,
+pub enum InputEvent {
+    KeyButtonEvent(KeyButtonEvent),
+    MouseButtonEvent(MouseButtonEvent),
+    MouseMoveEvent(MouseMoveEvent),
+    FocusEvent(FocusEvent),
 }
 
-impl InputState {
-    pub fn new() -> Self {
-        let keys_pressed = HashMap::new();
-        let mouse_buttons_pressed = HashMap::new();
-        let mouse_delta = cgmath::Vector2::new(0.0, 0.0);
-        Self {
-            // keys_pressed: HashMap<VirtualKeyCode, bool>::new(),
-            // mouse_buttons_pressed: HashMap<MouseButton, bool>::new(),
-            // mouse_position: Point2<i32>::new(),
-            // mouse_delta: Point2<i32>::new(),
-            // scroll_angle_delta: 0,
-            keys_pressed,
-            mouse_buttons_pressed,
-            mouse_position_set: false,
-            mouse_delta,
-            scroll_angle_delta: 0.0,
-            mouse_first_event: true,
+pub struct KeyButtonEvent {
+    pub logical_button: VirtualKeyCode,
+    pub is_pressed: bool,
+    pub timestamp: Instant,
+}
+pub struct MouseButtonEvent {
+    pub logical_button: MouseButton,
+    pub is_pressed: bool,
+    pub timestamp: Instant,
+}
+pub struct MouseMoveEvent {
+    pub delta_x: f64,
+    pub delta_y: f64,
+    pub timestamp: Instant,
+}
+
+pub struct FocusEvent {
+    pub focused: bool,
+    pub timestamp: Instant,
+}
+
+#[derive(Clone)]
+pub struct KeyButtonState {
+    pub logical_button: VirtualKeyCode,
+    pub is_pressed: bool,
+    pub last_transition: Option<Instant>,
+}
+
+#[derive(Clone)]
+pub struct MouseButtonState {
+    pub logical_button: MouseButton,
+    pub is_pressed: bool,
+    pub last_transition: Option<Instant>,
+}
+
+#[derive(Clone)]
+pub struct MousePositionState {
+    pub current_x: f64,
+    pub current_y: f64,
+    pub previous_x: Option<f64>,
+    pub previous_y: Option<f64>,
+    pub current_timestamp: Option<Instant>,
+    pub previous_timestamp: Option<Instant>,
+}
+
+#[derive(Clone)]
+pub struct InputState {
+    pub key_buttons: HashMap<VirtualKeyCode, KeyButtonState>,
+    pub mouse_buttons: HashMap<MouseButton, MouseButtonState>,
+    pub mouse_position: MouseAccumulator,
+}
+
+#[derive(Clone)]
+pub struct MouseAccumulator {
+    pub mouse_position: Option<MousePositionState>,
+}
+
+impl MouseAccumulator {
+    pub fn initialize_mouse_position(mut self, prior_state: MousePositionState) {
+        self.mouse_position = Some(prior_state);
+    }
+
+    pub fn difference_from(&self, other: &MouseAccumulator) -> (f64, f64, Duration) {
+        match (&self.mouse_position, &other.mouse_position) {
+            (Some(s), Some(o)) => {
+                let mut duration = Duration::ZERO;
+                match (s.current_timestamp, o.current_timestamp) {
+                    (Some(s_timestamp), Some(o_timestamp)) => {
+                        duration = s_timestamp.saturating_duration_since(o_timestamp);
+                    }
+                    _ => {}
+                }
+                return (
+                    s.current_x - o.current_x,
+                    s.current_y - o.current_y,
+                    duration,
+                );
+            }
+            _ => {
+                return (0.0, 0.0, Duration::ZERO);
+            }
         }
     }
 
-    pub fn key_pressed(&self, key: &VirtualKeyCode) -> bool {
-        self.keys_pressed.get(key).copied().unwrap_or(false)
-    }
-
-    /// Quick hack to be able to step through collisions while debugging.
-    /// returns if key is pressed, then clears pressed state so that next
-    /// read will return false until we get another key press event
-    /// unfortunately, windows repeatedly sends a key press event for a
-    /// key that's held down, but there's enough of a delay that this is still
-    /// useful and you can physically press and release a key fast enough to only
-    /// get 1 press event, which means the key doesn't stay pressed for multiple
-    /// frames in a row.
-    pub fn consume_key_pressed(&mut self, key: &VirtualKeyCode) -> bool {
-        let pressed = self.key_pressed(key);
-        self.set_key_released(key);
-        pressed
-    }
-
-    pub fn mouse_button_pressed(&self, button: &MouseButton) -> bool {
-        self.mouse_buttons_pressed
-            .get(button)
-            .copied()
-            .unwrap_or(false)
-    }
-
-    pub fn set_key_pressed(&mut self, key: &VirtualKeyCode) {
-        self.keys_pressed.insert(*key, true);
-    }
-
-    pub fn set_key_released(&mut self, key: &VirtualKeyCode) {
-        self.keys_pressed.insert(*key, false);
-    }
-
-    pub fn set_mouse_button_presssed(&mut self, button: &MouseButton) {
-        self.mouse_buttons_pressed.insert(*button, true);
-    }
-
-    pub fn set_mouse_button_released(&mut self, button: &MouseButton) {
-        self.mouse_buttons_pressed.insert(*button, false);
-    }
-
-    pub fn mouse_delta(&self) -> cgmath::Vector2<f32> {
-        self.mouse_delta
-    }
-
-    pub fn mouse_position_set(&self) -> bool {
-        self.mouse_position_set
-    }
-
-    pub fn add_mouse_delta(&mut self, delta_x: f32, delta_y: f32) {
-        // println!("{:?} {:?}", delta_x, delta_y);
-        self.mouse_delta.x = delta_x;
-        self.mouse_delta.y = delta_y;
-        self.mouse_position_set = true;
-    }
-
-    pub fn clear_mouse_delta(&mut self) {
-        self.mouse_delta.x = 0.0;
-        self.mouse_delta.y = 0.0;
-        self.mouse_position_set = false;
-    }
-
-    pub fn is_first_mouse_event(&mut self) -> bool {
-        self.mouse_first_event
-    }
-
-    pub fn set_is_first_mouse_event(&mut self, is_first_move: bool) {
-        self.mouse_first_event = is_first_move;
+    pub fn apply_mouse_move(&mut self, event: &MouseMoveEvent) {
+        match &mut self.mouse_position {
+            Some(mouse) => {
+                mouse.previous_x = Some(mouse.current_x);
+                mouse.previous_y = Some(mouse.current_y);
+                mouse.current_x += event.delta_x;
+                mouse.current_y += event.delta_y;
+                mouse.previous_timestamp = mouse.current_timestamp;
+                mouse.current_timestamp = Some(event.timestamp);
+            }
+            None => {
+                self.mouse_position = Some(MousePositionState {
+                    current_x: event.delta_x,
+                    current_y: event.delta_y,
+                    previous_x: None,
+                    previous_y: None,
+                    current_timestamp: Some(event.timestamp),
+                    previous_timestamp: None,
+                })
+            }
+        }
     }
 }
+
+impl InputState {
+    pub fn key_pressed(&self, key: &VirtualKeyCode) -> bool {
+        match self.key_buttons.get(key) {
+            Some(KeyButtonState {
+                is_pressed: true, .. // .. means the other fields don't matter
+            }) => {
+                return true
+            },
+            _ => { return false }
+        }
+    }
+
+    pub fn apply_event(&mut self, event: &InputEvent) {
+        match event {
+            InputEvent::KeyButtonEvent(KeyButtonEvent {
+                logical_button,
+                is_pressed,
+                timestamp,
+            }) => {
+                // This says to look up a key in the map [entry()]
+                // and if that key exists, modify it in-place [and_modify()]
+                // or if the key doesn't exist, create a new entry [or_insert()]
+                self.key_buttons
+                    .entry(*logical_button)
+                    .and_modify(|entry| {
+                        if *is_pressed != entry.is_pressed {
+                            entry.is_pressed = *is_pressed;
+                            entry.last_transition = Some(*timestamp);
+                        }
+                    })
+                    .or_insert(KeyButtonState {
+                        logical_button: *logical_button,
+                        is_pressed: *is_pressed,
+                        last_transition: None,
+                    });
+            }
+            InputEvent::MouseButtonEvent(MouseButtonEvent {
+                logical_button,
+                is_pressed,
+                timestamp,
+            }) => {
+                // TODO: The only difference between this and the KeyButtonEvent is
+                // the name of the map and the type of logical_button. There should
+                // be a way to factor it out.
+                self.mouse_buttons
+                    .entry(*logical_button)
+                    .and_modify(|entry| {
+                        if *is_pressed != entry.is_pressed {
+                            entry.is_pressed = *is_pressed;
+                            entry.last_transition = Some(*timestamp);
+                        }
+                    })
+                    .or_insert(MouseButtonState {
+                        logical_button: *logical_button,
+                        is_pressed: *is_pressed,
+                        last_transition: None,
+                    });
+            }
+            InputEvent::MouseMoveEvent(event) => self.mouse_position.apply_mouse_move(&event),
+            InputEvent::FocusEvent(event) => {
+                // TODO
+            }
+        }
+    }
+}
+
+// Something like on each event, update InputState, then pass
+// both the new event and InputState to each input state machine
+// so the the SMs can check if they need to transition
+
+// State machines probably live in `game/`
+// Mouse "state machine" right now will be something like
+// on mouse move
+//    if current position is 0, 0
+//        pass
+//    else if previous position doesn't exist:
+//        reset to 0, 0
+//    else:
+//        apply delta to camera
+//        reset to 0, 0
+// real states would come in if we wanted to have a capture/uncapture
+// option, so there would be the uncaptured state where we don't
+// move the camera and a key press would transition to the captured
+// state which is described above.
+//
+// More elaborate state machines might track sequences of mouse moves
+// or track whether the current move is a "click and drag" or
+// in a certain region of the screen, etc.
+
+// pub fn get_camera_yaw_deg_delta(input_state: &InputState) -> f32 {
+//     if input_state.mouse_position_set() {
+//         // Yaw increases as the mouse moves left, because our coordinate frame is
+//         // X foward, Y to the left.
+//         return -1.0 * input_state.mouse_delta().x;
+//     } else {
+//         return 0.0;
+//     }
+// }
+
+// pub fn get_camera_pitch_deg_delta(input_state: &InputState) -> f32 {
+//     if input_state.mouse_position_set() {
+//         return -1.0 * input_state.mouse_delta().y;
+//     } else {
+//         return 0.0;
+//     }
+// }

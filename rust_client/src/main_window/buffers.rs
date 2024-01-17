@@ -10,6 +10,16 @@ pub struct GeometryBuffers {
     pub instance_count: u32,
 }
 
+// TODO
+// RenderEntity and Entity are both terrible names because they don't include, e.g.,
+// Camera and they include multiple instances.
+// TODO: this probably shouldn't live in buffers, not sure where it should go
+use super::super::geometry::geometry::TriangleMesh;
+pub struct RenderEntity {
+    pub mesh: TriangleMesh,
+    pub instances: Vec<Instance>,
+}
+
 // bytemuck traits say that this can be converted to bytes and can be used
 // with std::mem::zeroed()
 // #[repr(C)] is for compatibility with shaders
