@@ -53,7 +53,8 @@ pub fn update_game_state(
 ) -> SceneState {
     // state should be the output from the last call to this `update` function
 
-    // TODO
+    // TODO can't accumulate mouse position forever. At some point this needs to just
+    // be a delta and not absolute position
 
     // Initialize this update's mouse accumulator with the state of the previous frame
     let mut new_input_state = state.input_state.clone();

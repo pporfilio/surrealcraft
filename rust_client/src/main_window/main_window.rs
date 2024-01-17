@@ -26,6 +26,10 @@ use winit::{
 
 use super::super::game::camera::Camera;
 
+pub struct WindowMetadata {
+    is_first_mouse_move: bool,
+}
+
 pub fn geometry_buffers_from_mesh(
     device: &wgpu::Device,
     mesh: &TriangleMesh,
@@ -215,6 +219,7 @@ pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
 pub fn handle_input(
     event: &WindowEvent,
     window: &window::Window,
+    window_metadata: &mut WindowMetadata,
     event_queue: &mut VecDeque<InputEvent>,
 ) {
     // From sleeping in render() with wgpu::PresentMode::Fifo, it seems like key press
@@ -271,7 +276,12 @@ pub fn handle_input(
             // I had trouble getting this to work in update_game_state, so reset the
             // mouse to (0, 0) here and only enqueue the event if the event was not
             // the move back to (0, 0)
-            if !(delta_x == 0.0 && delta_y == 0.0) {
+
+            if window_metadata.is_first_mouse_move {
+                // Note that we've had a mouse move and ignore this first move
+                // This keeps the view from jumping when we first mouse into the window
+                window_metadata.is_first_mouse_move = false;
+            } else if !(delta_x == 0.0 && delta_y == 0.0) {
                 event_queue.push_back(InputEvent::MouseMoveEvent(MouseMoveEvent {
                     delta_x,
                     delta_y,
@@ -285,29 +295,9 @@ pub fn handle_input(
                     println!("Error centering cursor position: {:?}", err);
                 }
             }
-
-            // // println!("w: {:?} h: {:?}", w, h);
-            // if delta_x == 0.0 && delta_y == 0.0 {
-            //     // println!("Cursor still centered");
-            // } else {
-            //     // println!("Delta Y: {:?}", delta_y);
-            //     if !input_state.is_first_mouse_event() {
-            //         input_state.add_mouse_delta(delta_x, delta_y);
-            //     } else {
-            //         input_state.set_is_first_mouse_event(false);
-            //     }
-            //     // println!("scale factor: {:?}", window.scale_factor());
-            //     let new_x = w * scale / 2.0;
-            //     let new_y = h * scale / 2.0;
-            //     // println!("new width: {:?} new_height: {:?}", new_x, new_y);
-            //     if let Err(err) =
-            //         window.set_cursor_position(winit::dpi::PhysicalPosition::new(new_x, new_y))
-            //     {
-            //         println!("Error centering cursor position: {:?}", err);
-            //     }
-            // }
         }
         WindowEvent::Focused(focused) => {
+            // TODO: should I reset is_first_mouse_move if the focus changes?
             event_queue.push_back(InputEvent::FocusEvent(FocusEvent {
                 focused: *focused,
                 timestamp: Instant::now(),
@@ -321,6 +311,9 @@ pub async fn run() {
     env_logger::init();
     let event_loop = EventLoop::new();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
+    let mut window_metadata = WindowMetadata {
+        is_first_mouse_move: true, // will be set to false once we've had a mouse move
+    };
 
     let mut wgpu_state = WGPUState::new(&window).await;
 
@@ -432,7 +425,7 @@ pub async fn run() {
                         ..
                     } => *control_flow = ControlFlow::Exit,
                     _ => {
-                        handle_input(event, &window, &mut event_queue);
+                        handle_input(event, &window, &mut window_metadata, &mut event_queue);
                     }
                 }
             }

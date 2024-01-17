@@ -206,42 +206,6 @@ impl InputState {
 // or track whether the current move is a "click and drag" or
 // in a certain region of the screen, etc.
 
-// pub fn get_camera_position_delta(
-//     camera: &Camera,
-//     input_state: &InputState,
-//     delta_s: f32,
-// ) -> cgmath::Vector3<f32> {
-//     let mut delta_forward: f32 = 0.0;
-//     let mut delta_up: f32 = 0.0;
-//     let mut delta_right: f32 = 0.0;
-//     if input_state.key_pressed(&VirtualKeyCode::W) || input_state.key_pressed(&VirtualKeyCode::Up) {
-//         delta_forward += delta_s;
-//     }
-//     if input_state.key_pressed(&VirtualKeyCode::S) || input_state.key_pressed(&VirtualKeyCode::Down)
-//     {
-//         delta_forward -= delta_s;
-//     }
-//     if input_state.key_pressed(&VirtualKeyCode::D)
-//         || input_state.key_pressed(&VirtualKeyCode::Right)
-//     {
-//         delta_right += delta_s;
-//     }
-//     if input_state.key_pressed(&VirtualKeyCode::A) || input_state.key_pressed(&VirtualKeyCode::Left)
-//     {
-//         delta_right -= delta_s;
-//     }
-//     if input_state.key_pressed(&VirtualKeyCode::Q) {
-//         delta_up += delta_s;
-//     }
-//     if input_state.key_pressed(&VirtualKeyCode::E) {
-//         delta_up -= delta_s;
-//     }
-
-//     delta_forward * camera.look_vector()
-//         + delta_up * camera.up_vector()
-//         + delta_right * camera.look_vector().cross(camera.up_vector()).normalize()
-// }
-
 // pub fn get_camera_yaw_deg_delta(input_state: &InputState) -> f32 {
 //     if input_state.mouse_position_set() {
 //         // Yaw increases as the mouse moves left, because our coordinate frame is
