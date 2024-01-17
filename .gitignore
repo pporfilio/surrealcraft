@@ -1,3 +1,6 @@
 **/build-qt*
 **/build-test*
 *.pro.user
+rust_client/target/*
+surreal-env/*
+desktop.ini
