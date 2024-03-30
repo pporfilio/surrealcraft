@@ -2,6 +2,7 @@ use main_window::main_window::run;
 
 pub mod game;
 pub mod geometry;
+pub mod levels;
 pub mod main_window;
 
 fn main() {
