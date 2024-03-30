@@ -1,21 +1,14 @@
 use super::super::game::state::{update_game_state, SceneState};
-use super::super::geometry::geometry::*;
-use super::super::geometry::obj::*;
-use super::super::geometry::voxels::*;
+use super::super::geometry::buffers::{GeometryBuffers, RenderEntity};
+use super::super::levels::collision_test::collision_test_main::initialize_collision_test;
 use super::super::levels::coordinate_probe::coordinate_probe_main::initialize_coordinate_probe;
-
-use super::super::geometry::buffers::{
-    geometry_buffers_from_mesh, GeometryBuffers, Instance, InstanceRaw, RenderEntity,
-};
+use super::super::levels::voxel_scene::voxel_scene_main::initialize_voxel_scene;
 use super::input_state::{
     FocusEvent, InputEvent, InputState, KeyButtonEvent, MouseAccumulator, MouseButtonEvent,
     MouseMoveEvent,
 };
 use super::wgpu_state::WGPUState;
-use crate::game::camera::rad_to_deg;
-use crate::geometry;
 use cgmath::InnerSpace;
-use cgmath::Rotation3;
 // use std::iter::Zip;
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -33,90 +26,6 @@ pub struct WindowMetadata {
     is_first_mouse_move: bool,
 }
 
-pub fn initialize_collision_test(
-    device: &wgpu::Device,
-) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
-    //let collision_mesh = collision_mesh_2();
-    let collision_mesh = collision_mesh_1();
-    let mut collision_mesh_instances: Vec<Instance> = Vec::new();
-    collision_mesh_instances.push(Instance::new());
-
-    // let collision_mesh = collision_mesh_2();
-
-    let unit_sphere_mesh = read_obj(
-        "resources/unit_sphere.obj",
-        cgmath::Vector3::new(0.2, 0.3, 0.4),
-    )
-    .unwrap();
-
-    let mut unit_sphere_instances: Vec<Instance> = Vec::new();
-    unit_sphere_instances.push(Instance {
-        // position: cgmath::Vector3::new(0.0, 0.0, 2.0),
-        position: cgmath::Vector3::new(0.0, 0.0, 0.0),
-        rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
-    });
-    // for x in 0..10 {
-    //     for z in 0..10 {
-    //         unit_sphere_instances.push(Instance {
-    //             position: cgmath::Vector3::new((x * 2) as f32, 0.0, (z * 2) as f32),
-    //             rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
-    //         })
-    //     }
-    // }
-
-    let mut entities: Vec<RenderEntity> = Vec::new();
-    let mut geometry_buffers: Vec<GeometryBuffers> = Vec::new();
-    geometry_buffers.push(geometry_buffers_from_mesh(
-        device,
-        &unit_sphere_mesh,
-        &unit_sphere_instances,
-    ));
-    entities.push(RenderEntity {
-        mesh: unit_sphere_mesh,
-        instances: unit_sphere_instances,
-    });
-
-    geometry_buffers.push(geometry_buffers_from_mesh(
-        device,
-        &collision_mesh,
-        &collision_mesh_instances,
-    ));
-    entities.push(RenderEntity {
-        mesh: collision_mesh,
-        instances: collision_mesh_instances,
-    });
-
-    (entities, geometry_buffers)
-}
-
-pub fn initialize_voxel_scene(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
-    let vd =
-        voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
-            .unwrap();
-
-    // let vd = voxel_test_geometry();
-
-    let mut entities: Vec<RenderEntity> = Vec::new();
-    let mut geometry_buffers: Vec<GeometryBuffers> = Vec::new();
-
-    let voxel_mesh = triangles_from_voxel_data(&vd);
-
-    let mut voxel_instances: Vec<Instance> = Vec::new();
-    voxel_instances.push(Instance::new());
-
-    geometry_buffers.push(geometry_buffers_from_mesh(
-        device,
-        &voxel_mesh,
-        &voxel_instances,
-    ));
-    entities.push(RenderEntity {
-        mesh: voxel_mesh,
-        instances: voxel_instances,
-    });
-
-    (entities, geometry_buffers)
-}
-
 pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
     // TODO: WASM
     // can't load files from disk in a web browser. They describe a webserver approach
@@ -124,9 +33,9 @@ pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<Geo
 
     // initialize_collision_test(device)
 
-    // initialize_voxel_scene(device)
+    initialize_voxel_scene(device)
 
-    initialize_coordinate_probe(device)
+    // initialize_coordinate_probe(device)
 }
 
 pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {

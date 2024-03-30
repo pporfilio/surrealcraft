@@ -32,50 +32,6 @@ impl TriangleMesh {
     }
 }
 
-pub fn collision_mesh_1() -> TriangleMesh {
-    let color = cgmath::Vector3::new(115.0 / 255.0, 147.0 / 255.0, 179.0 / 255.0);
-    let mut tm = TriangleMesh::new(200, 200);
-
-    // Square at x = 5 facing toward origin, with a slight tilt
-    tm.vertices.push(cgmath::Vector3::new(5.5, 2.0, 1.8));
-    tm.vertices.push(cgmath::Vector3::new(5.5, 2.0, -1.8));
-    tm.vertices.push(cgmath::Vector3::new(4.5, -2.0, 2.0));
-    tm.vertices.push(cgmath::Vector3::new(4.5, -2.0, -2.0));
-
-    tm.indices.push(0);
-    tm.indices.push(1);
-    tm.indices.push(3);
-
-    tm.indices.push(3);
-    tm.indices.push(2);
-    tm.indices.push(0);
-
-    for _ in 0..4 {
-        tm.colors.push(color);
-    }
-
-    tm
-}
-
-pub fn collision_mesh_2() -> TriangleMesh {
-    let color = cgmath::Vector3::new(115.0 / 255.0, 147.0 / 255.0, 179.0 / 255.0);
-    let mut tm = TriangleMesh::new(200, 200);
-
-    tm.vertices.push(cgmath::Vector3::new(-5.0, 0.0, 0.0));
-    tm.vertices.push(cgmath::Vector3::new(7.0, -5.0, 0.0));
-    tm.vertices.push(cgmath::Vector3::new(7.0, 5.0, 0.0));
-
-    tm.indices.push(0);
-    tm.indices.push(1);
-    tm.indices.push(2);
-
-    for _ in 0..3 {
-        tm.colors.push(color);
-    }
-
-    tm
-}
-
 pub const CUBE_SCALE: f32 = 0.5;
 
 #[rustfmt::skip]
