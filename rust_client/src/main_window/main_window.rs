@@ -3,11 +3,11 @@ use super::super::geometry::buffers::{GeometryBuffers, RenderEntity};
 use super::super::levels::collision_test::collision_test_main::initialize_collision_test;
 use super::super::levels::coordinate_probe::coordinate_probe_main::initialize_coordinate_probe;
 use super::super::levels::voxel_scene::voxel_scene_main::initialize_voxel_scene;
-use super::input_state::{
+use super::wgpu_state::WGPUState;
+use crate::game::input_state::{
     FocusEvent, InputEvent, InputState, KeyButtonEvent, MouseAccumulator, MouseButtonEvent,
     MouseMoveEvent,
 };
-use super::wgpu_state::WGPUState;
 use cgmath::InnerSpace;
 // use std::iter::Zip;
 use std::collections::HashMap;
@@ -28,6 +28,9 @@ pub struct WindowMetadata {
 
 // Next things:
 // look into adding normals and basic lighting, maybe even w/o a matcap
+// move event handling from game::state to individual levels, maybe retaining
+//   some common functionality under game::
+//   Also, re-enable collision step code from game::state
 // could add tests that the camera behaves correctly based on input state
 //   and make the constants properties of the camera to make tests consistent
 // log event stream

@@ -1,12 +1,11 @@
-use crate::main_window::input_state::KeyButtonState;
 use cgmath::InnerSpace;
 
 // TODO: ugh input_state should probalby not be in main_window
 // maybe we should be in like interface_layer or something at the
 // same level as game, geometry, and main_window
 use super::super::geometry::buffers::RenderEntity;
-use super::super::main_window::input_state::{InputEvent, InputState};
 use super::camera::Camera;
+use super::input_state::{InputEvent, InputState, KeyButtonState};
 use std::collections::VecDeque;
 use winit::event::VirtualKeyCode;
 
