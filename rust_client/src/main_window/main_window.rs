@@ -221,6 +221,7 @@ pub fn handle_input(
     window: &window::Window,
     window_metadata: &mut WindowMetadata,
     event_queue: &mut VecDeque<InputEvent>,
+    mouse_captured: bool,
 ) {
     // From sleeping in render() with wgpu::PresentMode::Fifo, it seems like key press
     // events get queued up and processed when control returns to the event loop.
@@ -257,6 +258,10 @@ pub fn handle_input(
             }));
         }
         WindowEvent::CursorMoved { position, .. } => {
+            if !mouse_captured {
+                return;
+            }
+
             // Winit docs say this should not be used for 3d camera control
             // but don't say what should be used instead.
             // https://docs.rs/winit/latest/winit/event/enum.WindowEvent.html#variant.CursorMoved
@@ -336,6 +341,8 @@ pub async fn run() {
         },
     };
 
+    let mut mouse_captured = false;
+
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
@@ -414,6 +421,15 @@ pub async fn run() {
                         // new_inner_size is &&mut so we have to dereference it twice
                         wgpu_state.resize(**new_inner_size);
                     }
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(VirtualKeyCode::C),
+                                ..
+                            },
+                        ..
+                    } => mouse_captured = !mouse_captured,
                     WindowEvent::CloseRequested
                     | WindowEvent::KeyboardInput {
                         input:
@@ -425,7 +441,13 @@ pub async fn run() {
                         ..
                     } => *control_flow = ControlFlow::Exit,
                     _ => {
-                        handle_input(event, &window, &mut window_metadata, &mut event_queue);
+                        handle_input(
+                            event,
+                            &window,
+                            &mut window_metadata,
+                            &mut event_queue,
+                            mouse_captured,
+                        );
                     }
                 }
             }
