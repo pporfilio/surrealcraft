@@ -1,8 +1,8 @@
-use super::super::super::geometry::buffers::{
+use crate::geometry::buffers::{
     geometry_buffers_from_mesh, GeometryBuffers, Instance, RenderEntity,
 };
-use super::super::super::geometry::geometry::triangles_from_voxel_data;
-use super::super::super::geometry::voxels::voxel_data_from_file;
+use crate::geometry::geometry::triangles_from_voxel_data;
+use crate::geometry::voxels::voxel_data_from_file;
 
 pub fn initialize_voxel_scene(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
     let vd =

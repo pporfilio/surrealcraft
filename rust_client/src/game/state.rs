@@ -3,9 +3,9 @@ use cgmath::InnerSpace;
 // TODO: ugh input_state should probalby not be in main_window
 // maybe we should be in like interface_layer or something at the
 // same level as game, geometry, and main_window
-use super::super::geometry::buffers::RenderEntity;
 use super::camera::Camera;
 use super::input_state::{InputEvent, InputState, KeyButtonState};
+use crate::geometry::buffers::RenderEntity;
 use std::collections::VecDeque;
 use winit::event::VirtualKeyCode;
 

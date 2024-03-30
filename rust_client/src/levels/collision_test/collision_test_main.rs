@@ -1,8 +1,8 @@
-use super::super::super::geometry::buffers::{
+use crate::geometry::buffers::{
     geometry_buffers_from_mesh, GeometryBuffers, Instance, RenderEntity,
 };
-use super::super::super::geometry::geometry::TriangleMesh;
-use super::super::super::geometry::obj::read_obj;
+use crate::geometry::geometry::TriangleMesh;
+use crate::geometry::obj::read_obj;
 use cgmath::Rotation3;
 
 pub fn collision_mesh_1() -> TriangleMesh {

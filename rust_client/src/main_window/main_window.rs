@@ -1,13 +1,13 @@
-use super::super::game::state::{update_game_state, SceneState};
-use super::super::geometry::buffers::{GeometryBuffers, RenderEntity};
-use super::super::levels::collision_test::collision_test_main::initialize_collision_test;
-use super::super::levels::coordinate_probe::coordinate_probe_main::initialize_coordinate_probe;
-use super::super::levels::voxel_scene::voxel_scene_main::initialize_voxel_scene;
 use super::wgpu_state::WGPUState;
 use crate::game::input_state::{
     FocusEvent, InputEvent, InputState, KeyButtonEvent, MouseAccumulator, MouseButtonEvent,
     MouseMoveEvent,
 };
+use crate::game::state::{update_game_state, SceneState};
+use crate::geometry::buffers::{GeometryBuffers, RenderEntity};
+use crate::levels::collision_test::collision_test_main::initialize_collision_test;
+use crate::levels::coordinate_probe::coordinate_probe_main::initialize_coordinate_probe;
+use crate::levels::voxel_scene::voxel_scene_main::initialize_voxel_scene;
 use cgmath::InnerSpace;
 // use std::iter::Zip;
 use std::collections::HashMap;
@@ -20,7 +20,7 @@ use winit::{
     window::WindowBuilder,
 };
 
-use super::super::game::camera::Camera;
+use crate::game::camera::Camera;
 
 pub struct WindowMetadata {
     is_first_mouse_move: bool,
@@ -239,7 +239,7 @@ pub async fn run() {
                 //     camera.position(),
                 //     camera.look_vector()
                 // );
-                // use super::super::game::camera::rad_to_deg;
+                // use crate::game::camera::rad_to_deg;
                 // println!(
                 //     "Camera: pitch: {:?} yaw: {:?}",
                 //     rad_to_deg(camera.pitch_rad()),

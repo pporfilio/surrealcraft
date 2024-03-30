@@ -1,7 +1,7 @@
-use super::super::super::geometry::buffers::{
+use crate::geometry::buffers::{
     geometry_buffers_from_mesh, GeometryBuffers, Instance, RenderEntity,
 };
-use super::super::super::geometry::obj::read_obj;
+use crate::geometry::obj::read_obj;
 
 pub fn initialize_coordinate_probe(
     device: &wgpu::Device,

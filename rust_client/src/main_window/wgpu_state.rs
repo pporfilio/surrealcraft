@@ -1,5 +1,5 @@
-use super::super::geometry::buffers::{GeometryBuffers, InstanceRaw, RawMatrix, Vertex};
 use super::texture;
+use crate::geometry::buffers::{GeometryBuffers, InstanceRaw, RawMatrix, Vertex};
 use cgmath::SquareMatrix;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
