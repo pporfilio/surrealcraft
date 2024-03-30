@@ -1,4 +1,5 @@
 use cgmath::Rotation3;
+use wgpu::util::DeviceExt;
 
 pub struct GeometryBuffers {
     pub vertex_buffer: wgpu::Buffer,
@@ -14,7 +15,7 @@ pub struct GeometryBuffers {
 // RenderEntity and Entity are both terrible names because they don't include, e.g.,
 // Camera and they include multiple instances.
 // TODO: this probably shouldn't live in buffers, not sure where it should go
-use super::super::geometry::geometry::TriangleMesh;
+use crate::geometry::geometry::TriangleMesh;
 pub struct RenderEntity {
     pub mesh: TriangleMesh,
     pub instances: Vec<Instance>,
@@ -194,5 +195,58 @@ impl InstanceRaw {
             },
         ]);
         builder
+    }
+}
+
+pub fn geometry_buffers_from_mesh(
+    device: &wgpu::Device,
+    mesh: &TriangleMesh,
+    instances: &Vec<Instance>,
+) -> GeometryBuffers {
+    let mut vertex_data: Vec<f32> = Vec::new();
+    for (position, color) in mesh.vertices.iter().zip(mesh.colors.iter()) {
+        vertex_data.push(position.x);
+        vertex_data.push(position.y);
+        vertex_data.push(position.z);
+        vertex_data.push(color.x);
+        vertex_data.push(color.y);
+        vertex_data.push(color.z);
+    }
+
+    let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Vertex Buffer"),
+        // create_buffer_init needs plain u8 array. Bytemuck is a casting
+        // library and we added some traits to struct Vertex to make it work
+        // with bytemuck
+        contents: bytemuck::cast_slice(&vertex_data[..]),
+        usage: wgpu::BufferUsages::VERTEX,
+    });
+
+    let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Index Buffer"),
+        contents: bytemuck::cast_slice(&mesh.indices[..]),
+        usage: wgpu::BufferUsages::INDEX,
+    });
+
+    let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+    let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        label: Some("Instance Buffer"),
+        contents: bytemuck::cast_slice(&instance_data),
+        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+    });
+
+    // TODO
+    // GeometryBuffers should probably be refactored into geometry that has
+    // a mesh, instance info, and a buffers sub-struct or something and a function
+    // to update the buffers from updated mesh/instances and a way to indicate
+    // what needs to be re-sent to the GPU.
+    GeometryBuffers {
+        vertex_buffer,
+        index_buffer,
+        vertex_count: mesh.vertices.len() as u32,
+        index_count: mesh.indices.len() as u32,
+        instance_data,
+        instance_buffer,
+        instance_count: instances.len() as u32,
     }
 }

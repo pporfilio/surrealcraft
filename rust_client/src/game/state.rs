@@ -1,12 +1,11 @@
-use crate::main_window::input_state::KeyButtonState;
 use cgmath::InnerSpace;
 
 // TODO: ugh input_state should probalby not be in main_window
 // maybe we should be in like interface_layer or something at the
 // same level as game, geometry, and main_window
-use super::super::main_window::buffers::RenderEntity;
-use super::super::main_window::input_state::{InputEvent, InputState};
 use super::camera::Camera;
+use super::input_state::{InputEvent, InputState, KeyButtonState};
+use crate::geometry::buffers::RenderEntity;
 use std::collections::VecDeque;
 use winit::event::VirtualKeyCode;
 
@@ -150,11 +149,3 @@ pub fn get_camera_position_delta(
         + delta_up * camera.up_vector()
         + delta_right * camera.look_vector().cross(camera.up_vector()).normalize()
 }
-
-// Next things:
-// move geometry initialization functions out of main_window.rs
-// look into adding normals and basic lighting, maybe even w/o a matcap
-// could add tests that the camera behaves correctly based on input state
-//   and make the constants properties of the camera to make tests consistent
-// log event stream
-// could test event processing

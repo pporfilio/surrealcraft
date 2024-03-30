@@ -1,22 +1,18 @@
-use super::super::game::state::{update_game_state, SceneState};
-use super::super::geometry::geometry::*;
-use super::super::geometry::obj::*;
-use super::super::geometry::voxels::*;
-use super::buffers::{GeometryBuffers, Instance, InstanceRaw, RenderEntity};
-use super::input_state::{
+use super::wgpu_state::WGPUState;
+use crate::game::input_state::{
     FocusEvent, InputEvent, InputState, KeyButtonEvent, MouseAccumulator, MouseButtonEvent,
     MouseMoveEvent,
 };
-use super::wgpu_state::WGPUState;
-use crate::game::camera::rad_to_deg;
-use crate::geometry;
+use crate::game::state::{update_game_state, SceneState};
+use crate::geometry::buffers::{GeometryBuffers, RenderEntity};
+use crate::levels::collision_test::collision_test_main::initialize_collision_test;
+use crate::levels::coordinate_probe::coordinate_probe_main::initialize_coordinate_probe;
+use crate::levels::voxel_scene::voxel_scene_main::initialize_voxel_scene;
 use cgmath::InnerSpace;
-use cgmath::Rotation3;
 // use std::iter::Zip;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::time::Instant;
-use wgpu::util::DeviceExt;
 use winit::{
     event::*,
     event_loop::{ControlFlow, EventLoop},
@@ -24,171 +20,44 @@ use winit::{
     window::WindowBuilder,
 };
 
-use super::super::game::camera::Camera;
+use crate::game::camera::Camera;
 
 pub struct WindowMetadata {
     is_first_mouse_move: bool,
 }
 
-pub fn geometry_buffers_from_mesh(
-    device: &wgpu::Device,
-    mesh: &TriangleMesh,
-    instances: &Vec<Instance>,
-) -> GeometryBuffers {
-    let mut vertex_data: Vec<f32> = Vec::new();
-    for (position, color) in mesh.vertices.iter().zip(mesh.colors.iter()) {
-        vertex_data.push(position.x);
-        vertex_data.push(position.y);
-        vertex_data.push(position.z);
-        vertex_data.push(color.x);
-        vertex_data.push(color.y);
-        vertex_data.push(color.z);
-    }
+// Next things:
+// look into adding normals and basic lighting, maybe even w/o a matcap
+// move event handling from game::state to individual levels, maybe retaining
+//   some common functionality under game::
+//   Also, re-enable collision step code from game::state
+// could add tests that the camera behaves correctly based on input state
+//   and make the constants properties of the camera to make tests consistent
+// log event stream
+// could test event processing
 
-    let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Vertex Buffer"),
-        // create_buffer_init needs plain u8 array. Bytemuck is a casting
-        // library and we added some traits to struct Vertex to make it work
-        // with bytemuck
-        contents: bytemuck::cast_slice(&vertex_data[..]),
-        usage: wgpu::BufferUsages::VERTEX,
-    });
+// Something like on each event, update InputState, then pass
+// both the new event and InputState to each input state machine
+// so the the SMs can check if they need to transition
 
-    let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Index Buffer"),
-        contents: bytemuck::cast_slice(&mesh.indices[..]),
-        usage: wgpu::BufferUsages::INDEX,
-    });
-
-    let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
-    let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        label: Some("Instance Buffer"),
-        contents: bytemuck::cast_slice(&instance_data),
-        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-    });
-
-    // TODO
-    // GeometryBuffers should probably be refactored into geometry that has
-    // a mesh, instance info, and a buffers sub-struct or something and a function
-    // to update the buffers from updated mesh/instances and a way to indicate
-    // what needs to be re-sent to the GPU.
-    GeometryBuffers {
-        vertex_buffer,
-        index_buffer,
-        vertex_count: mesh.vertices.len() as u32,
-        index_count: mesh.indices.len() as u32,
-        instance_data,
-        instance_buffer,
-        instance_count: instances.len() as u32,
-    }
-}
-
-pub fn initialize_collision_test(
-    device: &wgpu::Device,
-) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
-    //let collision_mesh = collision_mesh_2();
-    let collision_mesh = collision_mesh_1();
-    let mut collision_mesh_instances: Vec<Instance> = Vec::new();
-    collision_mesh_instances.push(Instance::new());
-
-    // let collision_mesh = collision_mesh_2();
-
-    let unit_sphere_mesh = read_obj(
-        "resources/unit_sphere.obj",
-        cgmath::Vector3::new(0.2, 0.3, 0.4),
-    )
-    .unwrap();
-
-    let mut unit_sphere_instances: Vec<Instance> = Vec::new();
-    unit_sphere_instances.push(Instance {
-        // position: cgmath::Vector3::new(0.0, 0.0, 2.0),
-        position: cgmath::Vector3::new(0.0, 0.0, 0.0),
-        rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
-    });
-    // for x in 0..10 {
-    //     for z in 0..10 {
-    //         unit_sphere_instances.push(Instance {
-    //             position: cgmath::Vector3::new((x * 2) as f32, 0.0, (z * 2) as f32),
-    //             rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
-    //         })
-    //     }
-    // }
-
-    let mut entities: Vec<RenderEntity> = Vec::new();
-    let mut geometry_buffers: Vec<GeometryBuffers> = Vec::new();
-    geometry_buffers.push(geometry_buffers_from_mesh(
-        device,
-        &unit_sphere_mesh,
-        &unit_sphere_instances,
-    ));
-    entities.push(RenderEntity {
-        mesh: unit_sphere_mesh,
-        instances: unit_sphere_instances,
-    });
-
-    geometry_buffers.push(geometry_buffers_from_mesh(
-        device,
-        &collision_mesh,
-        &collision_mesh_instances,
-    ));
-    entities.push(RenderEntity {
-        mesh: collision_mesh,
-        instances: collision_mesh_instances,
-    });
-
-    (entities, geometry_buffers)
-}
-
-pub fn initialize_voxel_scene(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
-    let vd =
-        voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd")
-            .unwrap();
-
-    // let vd = voxel_test_geometry();
-
-    let mut entities: Vec<RenderEntity> = Vec::new();
-    let mut geometry_buffers: Vec<GeometryBuffers> = Vec::new();
-
-    let voxel_mesh = triangles_from_voxel_data(&vd);
-
-    let mut voxel_instances: Vec<Instance> = Vec::new();
-    voxel_instances.push(Instance::new());
-
-    geometry_buffers.push(geometry_buffers_from_mesh(
-        device,
-        &voxel_mesh,
-        &voxel_instances,
-    ));
-    entities.push(RenderEntity {
-        mesh: voxel_mesh,
-        instances: voxel_instances,
-    });
-
-    (entities, geometry_buffers)
-}
-
-pub fn initialize_coordinate_probe(
-    device: &wgpu::Device,
-) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
-    let tm = read_obj(
-        "C:\\source\\surrealcraft\\terrain_generation\\coordinate_probe\\coordinate_probe.obj",
-        cgmath::Vector3::new(0.2, 0.3, 0.4),
-    )
-    .unwrap();
-
-    let mut tm_instances: Vec<Instance> = Vec::new();
-    tm_instances.push(Instance::new());
-
-    let mut entities: Vec<RenderEntity> = Vec::new();
-    let mut geometry_buffers: Vec<GeometryBuffers> = Vec::new();
-    geometry_buffers.push(geometry_buffers_from_mesh(device, &tm, &tm_instances));
-    entities.push(RenderEntity {
-        mesh: tm,
-        instances: tm_instances,
-    });
-
-    (entities, geometry_buffers)
-}
+// State machines probably live in individual levels
+// Right now it's just handling input and real states would come in
+// once there's game logic.
+// Or if I can figure out how to handle the stuff that's currently in main_window:
+// on mouse move
+//    if current position is 0, 0
+//        pass
+//    else if previous position doesn't exist:
+//        reset to 0, 0
+//    else:
+//        apply delta to camera
+//        reset to 0, 0
+// or capture could be set up as part of a state machine
+// where a key press would transition between captured and uncaptured
+//
+// More elaborate state machines might track sequences of mouse moves
+// or track whether the current move is a "click and drag" or
+// in a certain region of the screen, etc.
 
 pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
     // TODO: WASM
@@ -197,9 +66,9 @@ pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<Geo
 
     // initialize_collision_test(device)
 
-    // initialize_voxel_scene(device)
+    initialize_voxel_scene(device)
 
-    initialize_coordinate_probe(device)
+    // initialize_coordinate_probe(device)
 }
 
 pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
@@ -221,6 +90,7 @@ pub fn handle_input(
     window: &window::Window,
     window_metadata: &mut WindowMetadata,
     event_queue: &mut VecDeque<InputEvent>,
+    mouse_captured: bool,
 ) {
     // From sleeping in render() with wgpu::PresentMode::Fifo, it seems like key press
     // events get queued up and processed when control returns to the event loop.
@@ -257,6 +127,10 @@ pub fn handle_input(
             }));
         }
         WindowEvent::CursorMoved { position, .. } => {
+            if !mouse_captured {
+                return;
+            }
+
             // Winit docs say this should not be used for 3d camera control
             // but don't say what should be used instead.
             // https://docs.rs/winit/latest/winit/event/enum.WindowEvent.html#variant.CursorMoved
@@ -336,6 +210,8 @@ pub async fn run() {
         },
     };
 
+    let mut mouse_captured = false;
+
     event_loop.run(move |event, _, control_flow| {
         match event {
             Event::RedrawRequested(window_id) if window_id == window.id() => {
@@ -363,7 +239,7 @@ pub async fn run() {
                 //     camera.position(),
                 //     camera.look_vector()
                 // );
-                // use super::super::game::camera::rad_to_deg;
+                // use crate::game::camera::rad_to_deg;
                 // println!(
                 //     "Camera: pitch: {:?} yaw: {:?}",
                 //     rad_to_deg(camera.pitch_rad()),
@@ -414,6 +290,15 @@ pub async fn run() {
                         // new_inner_size is &&mut so we have to dereference it twice
                         wgpu_state.resize(**new_inner_size);
                     }
+                    WindowEvent::KeyboardInput {
+                        input:
+                            KeyboardInput {
+                                state: ElementState::Pressed,
+                                virtual_keycode: Some(VirtualKeyCode::C),
+                                ..
+                            },
+                        ..
+                    } => mouse_captured = !mouse_captured,
                     WindowEvent::CloseRequested
                     | WindowEvent::KeyboardInput {
                         input:
@@ -425,7 +310,13 @@ pub async fn run() {
                         ..
                     } => *control_flow = ControlFlow::Exit,
                     _ => {
-                        handle_input(event, &window, &mut window_metadata, &mut event_queue);
+                        handle_input(
+                            event,
+                            &window,
+                            &mut window_metadata,
+                            &mut event_queue,
+                            mouse_captured,
+                        );
                     }
                 }
             }
