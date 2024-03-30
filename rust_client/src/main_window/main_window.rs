@@ -26,6 +26,36 @@ pub struct WindowMetadata {
     is_first_mouse_move: bool,
 }
 
+// Next things:
+// look into adding normals and basic lighting, maybe even w/o a matcap
+// could add tests that the camera behaves correctly based on input state
+//   and make the constants properties of the camera to make tests consistent
+// log event stream
+// could test event processing
+
+// Something like on each event, update InputState, then pass
+// both the new event and InputState to each input state machine
+// so the the SMs can check if they need to transition
+
+// State machines probably live in individual levels
+// Right now it's just handling input and real states would come in
+// once there's game logic.
+// Or if I can figure out how to handle the stuff that's currently in main_window:
+// on mouse move
+//    if current position is 0, 0
+//        pass
+//    else if previous position doesn't exist:
+//        reset to 0, 0
+//    else:
+//        apply delta to camera
+//        reset to 0, 0
+// or capture could be set up as part of a state machine
+// where a key press would transition between captured and uncaptured
+//
+// More elaborate state machines might track sequences of mouse moves
+// or track whether the current move is a "click and drag" or
+// in a certain region of the screen, etc.
+
 pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
     // TODO: WASM
     // can't load files from disk in a web browser. They describe a webserver approach

@@ -150,11 +150,3 @@ pub fn get_camera_position_delta(
         + delta_up * camera.up_vector()
         + delta_right * camera.look_vector().cross(camera.up_vector()).normalize()
 }
-
-// Next things:
-// move geometry initialization functions out of main_window.rs
-// look into adding normals and basic lighting, maybe even w/o a matcap
-// could add tests that the camera behaves correctly based on input state
-//   and make the constants properties of the camera to make tests consistent
-// log event stream
-// could test event processing
