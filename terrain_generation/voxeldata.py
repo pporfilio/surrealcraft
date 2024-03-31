@@ -30,10 +30,10 @@ if __name__ == "__main__":
         vd[i, :, :, 1:] = np.where(intensity3 > i, a[:, :, :3], 0)
         vd[i, :, :, :1] = np.where(intensity1 > i, 1, 0)
 
+    print(vd.shape)
     # Swap Z and Y axes because OpenGL has +Y up
-    print(vd.shape)
-    vd = np.swapaxes(vd, 0, 1)
-    print(vd.shape)
+    # vd = np.swapaxes(vd, 0, 1)
+    # print(vd.shape)
 
     # np.shape is backwards from our coordinate convention, = (z, y, x, voxel)
     # np.array[z][y][x][voxel]

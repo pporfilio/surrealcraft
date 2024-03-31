@@ -62,9 +62,8 @@ pub trait Scene {
 }
 
 pub fn default_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
+    // Position 5 units along x and look down -x at the yz plane
     Camera::new(
-        // position the camera one unit up and 2 units back
-        // +z is out of the screen
         (0.0, 0.0, 0.0).into(),
         0.0,
         0.0,

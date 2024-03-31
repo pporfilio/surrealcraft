@@ -26,10 +26,9 @@ impl Scene for VoxelScene {
         &mut self,
         device: &wgpu::Device,
     ) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
-        let vd = voxel_data_from_file(
-            "C:\\source\\surrealcraft\\terrain_generation\\kaladesh_island.vd",
-        )
-        .unwrap();
+        let vd =
+            voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\island_small.vd")
+                .unwrap();
 
         // let vd = voxel_test_geometry();
 

@@ -144,6 +144,10 @@ pub fn voxel_data_from_file(path: &str) -> Option<VoxelData<Voxel>> {
     }
 
     let bytes_to_read = 16 * dimensions.x as usize * dimensions.y as usize * dimensions.z as usize;
+    println!(
+        "({:?}, {:?}, {:?})",
+        dimensions.x, dimensions.y, dimensions.z
+    );
     let mut voxel_data_buffer: Vec<u8> = Vec::with_capacity(bytes_to_read);
     voxel_data_buffer.resize(bytes_to_read, 0);
 

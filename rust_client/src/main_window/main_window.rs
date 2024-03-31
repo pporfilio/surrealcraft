@@ -170,7 +170,7 @@ pub async fn run() {
     let mut collision_scene = CollisionTestScene::new();
     let mut voxel_scene = VoxelScene::new();
 
-    let mut current_scene = collision_scene;
+    let mut current_scene = voxel_scene;
 
     let (mut entities, mut geometry_buffers) =
         current_scene.initialize_geometry(&wgpu_state.device);
