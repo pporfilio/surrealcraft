@@ -40,23 +40,23 @@ use winit::event::VirtualKeyCode;
 
 pub trait Scene {
     // Set up camera
-    fn initialize_camera(&self, config: &wgpu::SurfaceConfiguration) -> Camera;
+    fn initialize_camera(&mut self, config: &wgpu::SurfaceConfiguration) -> Camera;
 
     // Set up geometry
     // TODO: WASM
     // can't load files from disk in a web browser. They describe a webserver approach
     // here: https://sotrh.github.io/learn-wgpu/beginner/tutorial9-models/#accessing-files-from-wasm
     fn initialize_geometry(
-        &self,
+        &mut self,
         device: &wgpu::Device,
     ) -> (Vec<RenderEntity>, Vec<GeometryBuffers>);
 
     // Return a new scene state with updates from this frame
     fn update_game_state(
-        &self,
+        &mut self,
         event_queue: &VecDeque<InputEvent>,
         state: &SceneState,
-        entities_fixme: &Vec<RenderEntity>,
+        entities_fixme: &mut Vec<RenderEntity>,
         delta_s: f32,
     ) -> SceneState;
 }
@@ -95,7 +95,6 @@ pub fn default_motion(
         .difference_from(&state.input_state.mouse_position);
 
     // use the difference to update the camera state
-    let movement_scale: f32 = 10.0;
     let rotation_scale: f32 = 0.2;
     let mut new_camera = state.camera.clone();
 

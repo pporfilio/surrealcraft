@@ -1,15 +1,16 @@
 use std::collections::VecDeque;
 
 use crate::game::camera::Camera;
-use crate::game::input_state::InputEvent;
+use crate::game::input_state::{InputEvent, KeyButtonEvent};
 use crate::game::state::SceneState;
 use crate::geometry::buffers::{
     geometry_buffers_from_mesh, GeometryBuffers, Instance, RenderEntity,
 };
-use crate::geometry::geometry::TriangleMesh;
+use crate::geometry::geometry::{move_sphere_with_collision, TriangleMesh};
 use crate::geometry::obj::read_obj;
 use crate::levels::scene::{default_camera, default_motion, Scene};
 use cgmath::Rotation3;
+use winit::event::VirtualKeyCode;
 
 pub fn collision_mesh_1() -> TriangleMesh {
     let color = cgmath::Vector3::new(115.0 / 255.0, 147.0 / 255.0, 179.0 / 255.0);
@@ -55,21 +56,25 @@ pub fn collision_mesh_2() -> TriangleMesh {
     tm
 }
 
-pub struct CollisionTestScene {}
+pub struct CollisionTestScene {
+    pub space_pressed: bool,
+}
 
 impl CollisionTestScene {
     pub fn new() -> Self {
-        Self {}
+        Self {
+            space_pressed: false,
+        }
     }
 }
 
 impl Scene for CollisionTestScene {
-    fn initialize_camera(&self, config: &wgpu::SurfaceConfiguration) -> Camera {
+    fn initialize_camera(&mut self, config: &wgpu::SurfaceConfiguration) -> Camera {
         return default_camera(config);
     }
 
     fn initialize_geometry(
-        &self,
+        &mut self,
         device: &wgpu::Device,
     ) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
         //let collision_mesh = collision_mesh_2();
@@ -126,23 +131,48 @@ impl Scene for CollisionTestScene {
     }
 
     fn update_game_state(
-        &self,
+        &mut self,
         event_queue: &VecDeque<InputEvent>,
         state: &SceneState,
-        entities_fixme: &Vec<RenderEntity>,
+        entities_fixme: &mut Vec<RenderEntity>,
         delta_s: f32,
     ) -> SceneState {
-        return default_motion(event_queue, state, entities_fixme, delta_s);
+        // Track if the space button was already pressed to find only transitions
+        // from unpressed to pressed.
+        // Move and collide each time space is pressed
+        for event in event_queue {
+            match event {
+                InputEvent::KeyButtonEvent(KeyButtonEvent {
+                    logical_button: VirtualKeyCode::Space,
+                    is_pressed: false,
+                    ..
+                }) => {
+                    if self.space_pressed {
+                        self.space_pressed = false;
+                    }
+                }
+                InputEvent::KeyButtonEvent(KeyButtonEvent {
+                    logical_button: VirtualKeyCode::Space,
+                    is_pressed: true,
+                    ..
+                }) => {
+                    if !self.space_pressed {
+                        self.space_pressed = true;
+                        let (new_location, attempts, finished_move) = move_sphere_with_collision(
+                            entities_fixme[0].instances[0].position,
+                            // cgmath::Vector3::new(0.1, 0.0, -0.1),
+                            cgmath::Vector3::new(0.1, 0.0, 0.0),
+                            &entities_fixme[1].mesh,
+                        );
+                        println!("{:?}, {:?}, {:?}", new_location, attempts, finished_move);
+                        entities_fixme[0].instances[0].position = new_location;
+                    }
+                }
+                _ => {}
+            }
+        }
 
-        //     if input_state.consume_key_pressed(&VirtualKeyCode::Space) {
-        //         let (new_location, attempts, finished_move) = move_sphere_with_collision(
-        //             entities[0].instances[0].position,
-        //             // cgmath::Vector3::new(0.1, 0.0, -0.1),
-        //             cgmath::Vector3::new(0.1, 0.0, 0.0),
-        //             &entities[1].mesh,
-        //         );
-        //         println!("{:?}, {:?}, {:?}", new_location, attempts, finished_move);
-        //         entities[0].instances[0].position = new_location;
-        //     }
+        // Now that we've updated the geometry, do the usual camera update
+        default_motion(event_queue, state, entities_fixme, delta_s)
     }
 }

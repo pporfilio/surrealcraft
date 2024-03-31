@@ -17,12 +17,12 @@ impl CoordinateProbeScene {
 }
 
 impl Scene for CoordinateProbeScene {
-    fn initialize_camera(&self, config: &wgpu::SurfaceConfiguration) -> Camera {
+    fn initialize_camera(&mut self, config: &wgpu::SurfaceConfiguration) -> Camera {
         return default_camera(config);
     }
 
     fn initialize_geometry(
-        &self,
+        &mut self,
         device: &wgpu::Device,
     ) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
         let tm = read_obj(
@@ -46,10 +46,10 @@ impl Scene for CoordinateProbeScene {
     }
 
     fn update_game_state(
-        &self,
+        &mut self,
         event_queue: &VecDeque<InputEvent>,
         state: &SceneState,
-        entities_fixme: &Vec<RenderEntity>,
+        entities_fixme: &mut Vec<RenderEntity>,
         delta_s: f32,
     ) -> SceneState {
         return default_motion(event_queue, state, entities_fixme, delta_s);
