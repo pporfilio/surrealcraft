@@ -1,8 +1,14 @@
+use std::collections::VecDeque;
+
+use crate::game::camera::Camera;
+use crate::game::input_state::InputEvent;
+use crate::game::state::SceneState;
 use crate::geometry::buffers::{
     geometry_buffers_from_mesh, GeometryBuffers, Instance, RenderEntity,
 };
 use crate::geometry::geometry::TriangleMesh;
 use crate::geometry::obj::read_obj;
+use crate::levels::scene::{default_camera, default_motion, Scene};
 use cgmath::Rotation3;
 
 pub fn collision_mesh_1() -> TriangleMesh {
@@ -49,58 +55,94 @@ pub fn collision_mesh_2() -> TriangleMesh {
     tm
 }
 
-pub fn initialize_collision_test(
-    device: &wgpu::Device,
-) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
-    //let collision_mesh = collision_mesh_2();
-    let collision_mesh = collision_mesh_1();
-    let mut collision_mesh_instances: Vec<Instance> = Vec::new();
-    collision_mesh_instances.push(Instance::new());
+pub struct CollisionTestScene {}
 
-    // let collision_mesh = collision_mesh_2();
+impl CollisionTestScene {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
 
-    let unit_sphere_mesh = read_obj(
-        "resources/unit_sphere.obj",
-        cgmath::Vector3::new(0.2, 0.3, 0.4),
-    )
-    .unwrap();
+impl Scene for CollisionTestScene {
+    fn initialize_camera(&self, config: &wgpu::SurfaceConfiguration) -> Camera {
+        return default_camera(config);
+    }
 
-    let mut unit_sphere_instances: Vec<Instance> = Vec::new();
-    unit_sphere_instances.push(Instance {
-        // position: cgmath::Vector3::new(0.0, 0.0, 2.0),
-        position: cgmath::Vector3::new(0.0, 0.0, 0.0),
-        rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
-    });
-    // for x in 0..10 {
-    //     for z in 0..10 {
-    //         unit_sphere_instances.push(Instance {
-    //             position: cgmath::Vector3::new((x * 2) as f32, 0.0, (z * 2) as f32),
-    //             rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
-    //         })
-    //     }
-    // }
+    fn initialize_geometry(
+        &self,
+        device: &wgpu::Device,
+    ) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
+        //let collision_mesh = collision_mesh_2();
+        let collision_mesh = collision_mesh_1();
+        let mut collision_mesh_instances: Vec<Instance> = Vec::new();
+        collision_mesh_instances.push(Instance::new());
 
-    let mut entities: Vec<RenderEntity> = Vec::new();
-    let mut geometry_buffers: Vec<GeometryBuffers> = Vec::new();
-    geometry_buffers.push(geometry_buffers_from_mesh(
-        device,
-        &unit_sphere_mesh,
-        &unit_sphere_instances,
-    ));
-    entities.push(RenderEntity {
-        mesh: unit_sphere_mesh,
-        instances: unit_sphere_instances,
-    });
+        // let collision_mesh = collision_mesh_2();
 
-    geometry_buffers.push(geometry_buffers_from_mesh(
-        device,
-        &collision_mesh,
-        &collision_mesh_instances,
-    ));
-    entities.push(RenderEntity {
-        mesh: collision_mesh,
-        instances: collision_mesh_instances,
-    });
+        let unit_sphere_mesh = read_obj(
+            "resources/unit_sphere.obj",
+            cgmath::Vector3::new(0.2, 0.3, 0.4),
+        )
+        .unwrap();
 
-    (entities, geometry_buffers)
+        let mut unit_sphere_instances: Vec<Instance> = Vec::new();
+        unit_sphere_instances.push(Instance {
+            // position: cgmath::Vector3::new(0.0, 0.0, 2.0),
+            position: cgmath::Vector3::new(0.0, 0.0, 0.0),
+            rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
+        });
+        // for x in 0..10 {
+        //     for z in 0..10 {
+        //         unit_sphere_instances.push(Instance {
+        //             position: cgmath::Vector3::new((x * 2) as f32, 0.0, (z * 2) as f32),
+        //             rotation: cgmath::Quaternion::from_angle_x(cgmath::Deg(0.0)),
+        //         })
+        //     }
+        // }
+
+        let mut entities: Vec<RenderEntity> = Vec::new();
+        let mut geometry_buffers: Vec<GeometryBuffers> = Vec::new();
+        geometry_buffers.push(geometry_buffers_from_mesh(
+            device,
+            &unit_sphere_mesh,
+            &unit_sphere_instances,
+        ));
+        entities.push(RenderEntity {
+            mesh: unit_sphere_mesh,
+            instances: unit_sphere_instances,
+        });
+
+        geometry_buffers.push(geometry_buffers_from_mesh(
+            device,
+            &collision_mesh,
+            &collision_mesh_instances,
+        ));
+        entities.push(RenderEntity {
+            mesh: collision_mesh,
+            instances: collision_mesh_instances,
+        });
+
+        (entities, geometry_buffers)
+    }
+
+    fn update_game_state(
+        &self,
+        event_queue: &VecDeque<InputEvent>,
+        state: &SceneState,
+        entities_fixme: &Vec<RenderEntity>,
+        delta_s: f32,
+    ) -> SceneState {
+        return default_motion(event_queue, state, entities_fixme, delta_s);
+
+        //     if input_state.consume_key_pressed(&VirtualKeyCode::Space) {
+        //         let (new_location, attempts, finished_move) = move_sphere_with_collision(
+        //             entities[0].instances[0].position,
+        //             // cgmath::Vector3::new(0.1, 0.0, -0.1),
+        //             cgmath::Vector3::new(0.1, 0.0, 0.0),
+        //             &entities[1].mesh,
+        //         );
+        //         println!("{:?}, {:?}, {:?}", new_location, attempts, finished_move);
+        //         entities[0].instances[0].position = new_location;
+        //     }
+    }
 }

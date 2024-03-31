@@ -3,13 +3,14 @@ use crate::game::input_state::{
     FocusEvent, InputEvent, InputState, KeyButtonEvent, MouseAccumulator, MouseButtonEvent,
     MouseMoveEvent,
 };
-use crate::game::state::{update_game_state, SceneState};
+use crate::game::state::SceneState;
 use crate::geometry::buffers::{GeometryBuffers, RenderEntity};
-use crate::levels::collision_test::collision_test_main::initialize_collision_test;
-use crate::levels::coordinate_probe::coordinate_probe_main::initialize_coordinate_probe;
-use crate::levels::voxel_scene::voxel_scene_main::initialize_voxel_scene;
+use crate::levels::collision_test::collision_test_main::CollisionTestScene;
+use crate::levels::coordinate_probe::coordinate_probe_main::CoordinateProbeScene;
+use crate::levels::voxel_scene::voxel_scene_main::VoxelScene;
 use cgmath::InnerSpace;
 // use std::iter::Zip;
+use crate::levels::scene::Scene;
 use std::collections::HashMap;
 use std::collections::VecDeque;
 use std::time::Instant;
@@ -58,32 +59,6 @@ pub struct WindowMetadata {
 // More elaborate state machines might track sequences of mouse moves
 // or track whether the current move is a "click and drag" or
 // in a certain region of the screen, etc.
-
-pub fn initialize_geometry(device: &wgpu::Device) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
-    // TODO: WASM
-    // can't load files from disk in a web browser. They describe a webserver approach
-    // here: https://sotrh.github.io/learn-wgpu/beginner/tutorial9-models/#accessing-files-from-wasm
-
-    // initialize_collision_test(device)
-
-    initialize_voxel_scene(device)
-
-    // initialize_coordinate_probe(device)
-}
-
-pub fn initialize_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
-    Camera::new(
-        // position the camera one unit up and 2 units back
-        // +z is out of the screen
-        (0.0, 0.0, 0.0).into(),
-        0.0,
-        0.0,
-        config.width as f32 / config.height as f32,
-        45.0,
-        0.1,
-        10000.0,
-    )
-}
 
 pub fn handle_input(
     event: &WindowEvent,
@@ -191,9 +166,16 @@ pub async fn run() {
 
     let mut wgpu_state = WGPUState::new(&window).await;
 
-    let (mut entities, mut geometry_buffers) = initialize_geometry(&wgpu_state.device);
+    let mut coordinate_scene = CoordinateProbeScene::new();
+    let mut collision_scene = CollisionTestScene::new();
+    let mut voxel_scene = VoxelScene::new();
 
-    let mut camera = initialize_camera(&wgpu_state.config);
+    let mut current_scene = coordinate_scene;
+
+    let (mut entities, mut geometry_buffers) =
+        current_scene.initialize_geometry(&wgpu_state.device);
+
+    let mut camera = current_scene.initialize_camera(&wgpu_state.config);
 
     let mut event_queue: VecDeque<InputEvent> = VecDeque::new();
 
@@ -229,7 +211,12 @@ pub async fn run() {
                 // println!("{:?}", delta_s);
                 prev_loop_instant = current_loop_instant;
 
-                scene_state = update_game_state(&mut event_queue, &scene_state, &entities, delta_s);
+                scene_state = current_scene.update_game_state(
+                    &mut event_queue,
+                    &scene_state,
+                    &entities,
+                    delta_s,
+                );
                 event_queue.clear();
 
                 // println!(
