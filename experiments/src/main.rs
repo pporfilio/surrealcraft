@@ -1,12 +1,9 @@
 // use rustc_hash::FxHasher;
 // use std::collections::hash_map::RandomState;
 
-use std::hash::{BuildHasher, Hasher};
-
 use ahash::RandomState;
-use cgmath::{InnerSpace, Vector3};
-use image;
 use cgmath::Vector2;
+use image;
 mod base_noise;
 
 fn main() {
@@ -45,10 +42,7 @@ fn main() {
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
         let value = base_noise::perlin_layer_2d(
             &s,
-            Vector2::new(
-                x as f32 / 400.0,
-                y as f32 / 400.0,
-            ),
+            Vector2::new(x as f32 / 400.0, y as f32 / 400.0),
             false,
         );
         if value < -0.01 {

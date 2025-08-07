@@ -59,9 +59,8 @@ pub fn hash_i32_vec2_to_f32_vec2(hash_state: &RandomState, vector: Vector2<i32>)
 
     // u64_to_f32 returns a number in the range 0 to 1 inclusive
     // so subtract 0.5 to get negative values with equal probability.
-    return Vector2::new(x - 0.5, y - 0.5 ).normalize();
+    return Vector2::new(x - 0.5, y - 0.5).normalize();
 }
-
 
 fn hash_i32_vec3_to_f32_vec3(hash_state: &RandomState, vector: Vector3<i32>) -> Vector3<f32> {
     // Similar approach to hash_i32_vec2_to_f32_vec2, but for vec3
@@ -86,9 +85,8 @@ fn hash_i32_vec3_to_f32_vec3(hash_state: &RandomState, vector: Vector3<i32>) -> 
     hasher.write_i32(vector.y ^ 987654321);
     let z = u64_to_f32(hasher.finish());
 
-    return Vector3::new(x - 0.5, y -0.5, z - 0.5).normalize();
+    return Vector3::new(x - 0.5, y - 0.5, z - 0.5).normalize();
 }
-
 
 fn lerp(t: f32, a: f32, b: f32) -> f32 {
     return a + t * (b - a);
@@ -161,10 +159,21 @@ pub fn perlin_layer_2d(hash_state: &RandomState, location: Vector2<f32>, _debug:
         hash_i32_vec2_to_f32_vec2(hash_state, Vector2::new(x_ceil as i32, y_floor as i32));
     let ll_vector =
         hash_i32_vec2_to_f32_vec2(hash_state, Vector2::new(x_floor as i32, y_ceil as i32));
-    let lr_vector = hash_i32_vec2_to_f32_vec2(hash_state, Vector2::new(x_ceil as i32, y_ceil as i32));
+    let lr_vector =
+        hash_i32_vec2_to_f32_vec2(hash_state, Vector2::new(x_ceil as i32, y_ceil as i32));
 
     if _debug {
-        println!("ul: ({}, {}) ur: ({}, {}) ll: ({}, {}) lr: ({}, {})", ul_vector.x, ul_vector.y, ur_vector.x, ur_vector.y, ll_vector.x, ll_vector.y, lr_vector.x, lr_vector.y);
+        println!(
+            "ul: ({}, {}) ur: ({}, {}) ll: ({}, {}) lr: ({}, {})",
+            ul_vector.x,
+            ul_vector.y,
+            ur_vector.x,
+            ur_vector.y,
+            ll_vector.x,
+            ll_vector.y,
+            lr_vector.x,
+            lr_vector.y
+        );
     }
 
     let ul_value = ul_vector.dot(Vector2::new(location.x - x_floor, location.y - y_floor));
@@ -175,16 +184,14 @@ pub fn perlin_layer_2d(hash_state: &RandomState, location: Vector2<f32>, _debug:
     let u = fade(location.x - x_floor);
     let v = fade(location.y - y_floor);
 
-    return lerp(v,
-        lerp(u, ul_value, ur_value),
-        lerp(u, ll_value, lr_value)
-    );
+    return lerp(v, lerp(u, ul_value, ur_value), lerp(u, ll_value, lr_value));
 }
 
 fn hash_vector(hash_state: &RandomState, x: i32, y: i32, z: i32) -> Vector3<f32> {
     return hash_i32_vec3_to_f32_vec3(hash_state, Vector3::new(x, y, z));
 }
 
+#[allow(unused)]
 fn perlin_layer_3d_draft_2(hash_state: &RandomState, location: Vector3<f32>, _debug: bool) -> f32 {
     let x_floor = location.x.floor() as i32;
     let y_floor = location.y.floor() as i32;
@@ -250,6 +257,7 @@ fn perlin_layer_3d_draft_2(hash_state: &RandomState, location: Vector3<f32>, _de
     return (result + 1.0) / 2.0;
 }
 
+#[allow(unused)]
 fn perlin_layer_3d_draft_1(hash_state: &RandomState, location: Vector3<f32>, debug: bool) -> f32 {
     let x_floor = location.x.floor() as i32;
     let y_floor = location.y.floor() as i32;
