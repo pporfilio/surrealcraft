@@ -18,6 +18,7 @@ fn hash_i32_to_f32_value(hash_state: &RandomState, value: i32) -> f32 {
 }
 
 fn hash_i32_vec2_to_f32_value(hash_state: &RandomState, vector: Vector2<i32>) -> f32 {
+    // Maps a point at integer coordinates to an arbitrary
     let mut hasher = hash_state.build_hasher();
     hasher.write_i32(vector.x);
     hasher.write_i32(vector.y);
@@ -27,8 +28,9 @@ fn hash_i32_vec2_to_f32_value(hash_state: &RandomState, vector: Vector2<i32>) ->
 pub fn hash_i32_vec2_to_f32_vec2(hash_state: &RandomState, vector: Vector2<i32>) -> Vector2<f32> {
     // Maps a point at integer coordinates to an arbitrary 2d vector.
     // Output vector is normalized.
-    // Both the x and y coordinate are used in generating both points, so that
-    // (a, b) and (b, a) produce unrelated output.
+    // Both the x and y coordinate are used in generating both points, so that the output
+    // is unique per point, i.e. inputs with the same x coordinate do not produce
+    // outputs with the same x coordinate.
     // Output vector is normalized.
     let mut hasher = hash_state.build_hasher();
     hasher.write_i32(12345);
@@ -42,6 +44,8 @@ pub fn hash_i32_vec2_to_f32_vec2(hash_state: &RandomState, vector: Vector2<i32>)
     hasher.write_i32(vector.x);
     let y = u64_to_f32(hasher.finish());
 
+    // u64_to_f32 returns a number in the range 0 to 1 inclusive
+    // so subtract 0.5 to get negative values with equal probability.
     return Vector2::new(x - 0.5, y - 0.5 ).normalize();
 }
 
@@ -51,6 +55,7 @@ fn lerp(t: f32, a: f32, b: f32) -> f32 {
 }
 
 fn fade(t: f32) -> f32 {
+    // Improved perlin noise fade function
     let t_64 = t as f64;
 
     let t_3 = t_64 * t_64 * t_64;
@@ -62,6 +67,8 @@ fn fade(t: f32) -> f32 {
 }
 
 pub fn noise_1d(hash_state: &RandomState, location: f32, _debug: bool) -> f32 {
+    // Produces noise with distinct values for integer inputs and smooth
+    // transitions inbetween.
     let x_floor = location.floor();
     let x_ceil = x_floor + 1.0;
     let left = hash_i32_to_f32_value(hash_state, x_floor as i32);
@@ -100,26 +107,28 @@ pub fn perlin_layer_2d(hash_state: &RandomState, location: Vector2<f32>, _debug:
     let x_ceil = x_floor + 1.0;
     let y_ceil = y_floor + 1.0;
 
-    let ul_grad =
+    // Get the vectors for each grid point surrounding the location.
+    // These are pseudo-random but will always be the same for the same grid point
+    // when the hash_state was initialized with the same seed.
+    let ul_vector =
         hash_i32_vec2_to_f32_vec2(hash_state, Vector2::new(x_floor as i32, y_floor as i32));
-    let ur_grad =
+    let ur_vector =
         hash_i32_vec2_to_f32_vec2(hash_state, Vector2::new(x_ceil as i32, y_floor as i32));
-    let ll_grad =
+    let ll_vector =
         hash_i32_vec2_to_f32_vec2(hash_state, Vector2::new(x_floor as i32, y_ceil as i32));
-    let lr_grad = hash_i32_vec2_to_f32_vec2(hash_state, Vector2::new(x_ceil as i32, y_ceil as i32));
+    let lr_vector = hash_i32_vec2_to_f32_vec2(hash_state, Vector2::new(x_ceil as i32, y_ceil as i32));
 
     if _debug {
-        println!("ul: ({}, {}) ur: ({}, {}) ll: ({}, {}) lr: ({}, {})", ul_grad.x, ul_grad.y, ur_grad.x, ur_grad.y, ll_grad.x, ll_grad.y, lr_grad.x, lr_grad.y);
+        println!("ul: ({}, {}) ur: ({}, {}) ll: ({}, {}) lr: ({}, {})", ul_vector.x, ul_vector.y, ur_vector.x, ur_vector.y, ll_vector.x, ll_vector.y, lr_vector.x, lr_vector.y);
     }
 
-    let ul_value = ul_grad.dot(Vector2::new(location.x - x_floor, location.y - y_floor));
-    let ur_value = ur_grad.dot(Vector2::new(location.x - x_ceil, location.y - y_floor));
-    let ll_value = ll_grad.dot(Vector2::new(location.x - x_floor, location.y - y_ceil));
-    let lr_value = lr_grad.dot(Vector2::new(location.x - x_ceil, location.y - y_ceil));
+    let ul_value = ul_vector.dot(Vector2::new(location.x - x_floor, location.y - y_floor));
+    let ur_value = ur_vector.dot(Vector2::new(location.x - x_ceil, location.y - y_floor));
+    let ll_value = ll_vector.dot(Vector2::new(location.x - x_floor, location.y - y_ceil));
+    let lr_value = lr_vector.dot(Vector2::new(location.x - x_ceil, location.y - y_ceil));
 
     let u = fade(location.x - x_floor);
     let v = fade(location.y - y_floor);
-
 
     return lerp(v,
         lerp(u, ul_value, ur_value),

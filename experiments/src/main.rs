@@ -264,93 +264,7 @@ fn perlin_layer(hash_state: &RandomState, location: Vector3<f32>, debug: bool) -
     // return result;
 }
 
-#[allow(unused)]
-fn _main() {
-    let s = RandomState::with_seeds(678091, 323, 1981243789, 90123);
-
-    // for x in 0..5 {
-    //     for y in 0..5 {
-    //         println!(
-    //             "Hash is {}",
-    //             hash_i32_vector_to_f32_value(&s, Vector3::new(x, y, 0))
-    //         );
-    //     }
-    // }
-
-    // println!("{}", u32::MAX);
-
-    // println!("{}", 396062919898711887 % u32::MAX as u64);
-
-    // println!("--------------------");
-
-    for x in vec![
-        0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7,
-        1.8, 1.9, 2.0,
-    ] {
-        perlin_layer_2(&s, Vector3::new(x, 0.0, 0.0), false);
-        // println!("{}", perlin_layer(&s, Vector3::new(x, 0.5, 0.5)));
-    }
-
-    // let result = perlin_layer(&s, Vector3::new(0.0, 0.0, 0.0));
-    // println!("{}", result);
-
-    let imgx = 800;
-    let imgy = 800;
-    let mut imgbuf = image::ImageBuffer::new(imgx, imgy);
-    for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
-        // let value = perlin_layer(
-        //     &s,
-        //     Vector3::new((x / 20) as f32 + 0.1, 0.0, 0.0),
-        //     y == 0 && x < 70,
-        // );
-        // let value = perlin_layer(
-        //     &s,
-        //     Vector3::new(x as f32 / 20.0, 0.0, 0.0),
-        //     y == 0 && x < 70,
-        // );
-
-        let value = perlin_layer(
-            &s,
-            Vector3::new(x as f32 / 40.0, y as f32 / 40.0, 0.0),
-            false,
-        );
-        *pixel = image::Luma([(value * 80.0).floor() as u8]);
-    }
-
-    imgbuf.save("test.png").unwrap();
-}
-
 use cgmath::Vector2;
-
-#[allow(unused)]
-fn __main() {
-    let hv1 = Vector2::new(0.8, 0.4);
-    let hv2 = Vector2::new(0.8, 0.4);
-    let points = [
-        Vector2::new(0.0, 0.0),
-        Vector2::new(0.25, 0.0),
-        Vector2::new(0.5, 0.0),
-        Vector2::new(0.75, 0.0),
-        Vector2::new(1.0, 0.0),
-        //Vector2::new(1.25, 0.0),
-    ];
-
-    let mut left_grad = Vec::<f32>::new();
-    let mut right_grad = Vec::<f32>::new();
-    let mut lerped = Vec::<f32>::new();
-    for point in points {
-        left_grad.push((Vector2::new(1.0, 1.0) - point).normalize().dot(hv1));
-        right_grad.push(Vector2::new(point.x, 1.0).normalize().dot(hv2));
-        lerped.push(
-            left_grad.last().unwrap() * (1.0 - point.x) + right_grad.last().unwrap() * (point.x),
-        );
-    }
-
-    println!("{:?}", left_grad);
-    println!("{:?}", right_grad);
-    println!("{:?}", lerped);
-}
-
 mod base_noise;
 
 fn main() {
@@ -372,7 +286,7 @@ fn main() {
         let pixel = imgbuf.get_pixel_mut(x, (y * imgy as f32).floor() as u32);
         *pixel = image::Rgb([255, 255, 255]);
     }
-    imgbuf.save("1d.png").unwrap();
+    imgbuf.save("smooth_value_noise_1d.png").unwrap();
 
     // Generate an image with random values at integer locations and smooth
     // transitions between. Looks like a blurred grid of squares
@@ -381,7 +295,7 @@ fn main() {
         let value = base_noise::noise_2d(&s, Vector2::new(x as f32 / 40.0, y as f32 / 40.0), false);
         *pixel = image::Luma([(value * 80.0).floor() as u8]);
     }
-    imgbuf.save("2d.png").unwrap();
+    imgbuf.save("smooth_value_noise_2d.png").unwrap();
 
     // Generate an image of a single layer of perlin noise
     let mut imgbuf = image::RgbImage::new(imgx, imgy);
@@ -406,40 +320,8 @@ fn main() {
     }
     imgbuf.save("perlin_2d.png").unwrap();
 
-    // for x in 0..10 {
-    //     for y in 0..10 {
-    //         println!(
-    //             "({}, {}): {:?}",
-    //             x,
-    //             y,
-    //             base_noise::perlin_layer_2d(&s, Vector2::new(x as f32 + 0.5, y as f32 + 0.5), false)
-    //         )
-    //     }
-    // }
-
-    // for x in 0..10 {
-    //     for y in 0..10 {
-    //         println!(
-    //             "({}, {}): {:?}",
-    //             x,
-    //             y,
-    //             base_noise::perlin_layer_2d(&s, Vector2::new(x as f32 + 0.5, y as f32 + 0.5), true)
-    //         )
-    //     }
-    // }
-
-
-    // let mut min = 1000.0;
-    // let mut max = -1000.0;
-    // for v in values {
-    //     if v < min {
-    //         min = v;
-    //     }
-    //     if v > max {
-    //         max = v;
-    //     }
-    // }
-
-    // println!("min: {}", min);
-    // println!("max: {}", max);
+    // TODO: ideas to try
+    // * when the random vector at each grid point had only positive components,
+    //   the output was similar to perlin noise but was much clearer that it was on a grid.
+    //   Could play with vectors limited to various ranges
 }
