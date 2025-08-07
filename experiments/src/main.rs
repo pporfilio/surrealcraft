@@ -1,7 +1,7 @@
 // use rustc_hash::FxHasher;
 // use std::collections::hash_map::RandomState;
 
-use std::hash::{self, BuildHasher, Hasher};
+use std::hash::{BuildHasher, Hasher};
 
 use ahash::RandomState;
 use cgmath::{InnerSpace, Vector3};
@@ -15,12 +15,7 @@ fn u64_to_f32(x: u64) -> f32 {
     return (x as f64 / u32::MAX as f64) as f32;
 }
 
-fn hash_i32_to_f32_value(hash_state: &RandomState, value: i32) -> f32 {
-    let mut hasher = hash_state.build_hasher();
-    hasher.write_i32(value);
-    return u64_to_f32(hasher.finish());
-}
-
+#[allow(unused)]
 fn hash_i32_vector_to_f32_vector(hash_state: &RandomState, vector: Vector3<i32>) -> Vector3<f32> {
     let mut hasher = hash_state.build_hasher();
     hasher.write_i32(12345);
@@ -43,13 +38,14 @@ fn hash_i32_vector_to_f32_vector(hash_state: &RandomState, vector: Vector3<i32>)
     hasher.write_i32(vector.y ^ 987654321);
     let z = u64_to_f32(hasher.finish());
 
-    // return Vector3::new(x, y, z).normalize();
-    let mut result = Vector3::new(x, y, z).normalize();
+    return Vector3::new(x, y, z).normalize();
+    // let mut result = Vector3::new(x, y, z).normalize();
     // result.y = 0.0;
     // result.z = 0.0;
-    return result;
+    // return result;
 }
 
+#[allow(unused)]
 fn hash_i32_vector_to_f32_value(hash_state: &RandomState, vector: Vector3<i32>) -> f32 {
     let mut hasher = hash_state.build_hasher();
     hasher.write_i32(vector.x);
@@ -78,7 +74,7 @@ fn fade(t: f32) -> f32 {
     return t;
 }
 
-fn perlin_layer_2(hash_state: &RandomState, location: Vector3<f32>, debug: bool) -> f32 {
+fn perlin_layer_2(hash_state: &RandomState, location: Vector3<f32>, _debug: bool) -> f32 {
     let x_floor = location.x.floor() as i32;
     let y_floor = location.y.floor() as i32;
     let z_floor = location.z.floor() as i32;
@@ -361,7 +357,8 @@ fn main() {
     // Creating a hasher from RandomState with a particular seed always
     // hashes the same inputs to the same outputs.
     // Is not dependent on other hashers that have been made from the RandomState.
-    let s = RandomState::with_seeds(678091, 323, 1981243789, 90123);
+    // let s = RandomState::with_seeds(678091, 323, 1981243789, 90123);
+    let s = RandomState::with_seeds(6791, 33423, 1243893479, 1223);
 
     let imgx = 800;
     let imgy = 800;
@@ -387,18 +384,24 @@ fn main() {
     imgbuf.save("2d.png").unwrap();
 
     // Generate an image of a single layer of perlin noise
-    let mut imgbuf = image::ImageBuffer::new(imgx, imgy);
+    let mut imgbuf = image::RgbImage::new(imgx, imgy);
     let mut values = Vec::<f32>::new();
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
         let value = base_noise::perlin_layer_2d(
             &s,
             Vector2::new(
-                (x as f32 / 200.0) - 1.0 / 400.0,
-                (y as f32 / 200.0) - 1.0 / 400.0,
+                x as f32 / 400.0,
+                y as f32 / 400.0,
             ),
             false,
         );
-        *pixel = image::Luma([((value + 0.5) * 250.0).floor() as u8]);
+        if value < -0.01 {
+            *pixel = image::Rgb([(-1.0 * value * 255.0).floor() as u8, 0, 0]);
+        } else if value > 0.01 {
+            *pixel = image::Rgb([0, 0, (value * 255.0).floor() as u8]);
+        } else {
+            *pixel = image::Rgb([0, 255, 0]);
+        }
         values.push(value);
     }
     imgbuf.save("perlin_2d.png").unwrap();
@@ -409,22 +412,34 @@ fn main() {
     //             "({}, {}): {:?}",
     //             x,
     //             y,
-    //             base_noise::hash_i32_vec2_to_f32_vec2(&s, Vector2::new(x, y))
+    //             base_noise::perlin_layer_2d(&s, Vector2::new(x as f32 + 0.5, y as f32 + 0.5), false)
     //         )
     //     }
     // }
 
-    let mut min = 1000.0;
-    let mut max = -1000.0;
-    for v in values {
-        if v < min {
-            min = v;
-        }
-        if v > max {
-            max = v;
-        }
-    }
+    // for x in 0..10 {
+    //     for y in 0..10 {
+    //         println!(
+    //             "({}, {}): {:?}",
+    //             x,
+    //             y,
+    //             base_noise::perlin_layer_2d(&s, Vector2::new(x as f32 + 0.5, y as f32 + 0.5), true)
+    //         )
+    //     }
+    // }
 
-    println!("min: {}", min);
-    println!("max: {}", max);
+
+    // let mut min = 1000.0;
+    // let mut max = -1000.0;
+    // for v in values {
+    //     if v < min {
+    //         min = v;
+    //     }
+    //     if v > max {
+    //         max = v;
+    //     }
+    // }
+
+    // println!("min: {}", min);
+    // println!("max: {}", max);
 }

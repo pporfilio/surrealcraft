@@ -1,7 +1,7 @@
 use ahash::RandomState;
 use cgmath::InnerSpace;
 use cgmath::Vector2;
-use std::hash::{self, BuildHasher, Hasher};
+use std::hash::{BuildHasher, Hasher};
 
 fn u64_to_f32(x: u64) -> f32 {
     // Hash values are always u64, but I want an f32 between 0 and 1.
@@ -42,9 +42,9 @@ pub fn hash_i32_vec2_to_f32_vec2(hash_state: &RandomState, vector: Vector2<i32>)
     hasher.write_i32(vector.x);
     let y = u64_to_f32(hasher.finish());
 
-    let mut result = Vector2::new(x, y).normalize();
-    return result;
+    return Vector2::new(x - 0.5, y - 0.5 ).normalize();
 }
+
 
 fn lerp(t: f32, a: f32, b: f32) -> f32 {
     return a + t * (b - a);
@@ -61,7 +61,7 @@ fn fade(t: f32) -> f32 {
     return result as f32;
 }
 
-pub fn noise_1d(hash_state: &RandomState, location: f32, debug: bool) -> f32 {
+pub fn noise_1d(hash_state: &RandomState, location: f32, _debug: bool) -> f32 {
     let x_floor = location.floor();
     let x_ceil = x_floor + 1.0;
     let left = hash_i32_to_f32_value(hash_state, x_floor as i32);
@@ -69,7 +69,7 @@ pub fn noise_1d(hash_state: &RandomState, location: f32, debug: bool) -> f32 {
     return lerp(fade(location - x_floor), left, right);
 }
 
-pub fn noise_2d(hash_state: &RandomState, location: Vector2<f32>, debug: bool) -> f32 {
+pub fn noise_2d(hash_state: &RandomState, location: Vector2<f32>, _debug: bool) -> f32 {
     // Produces noise with distinct values at each integer coordinates and smooth
     // transitions inbetween.
     let x_floor = location.x.floor();
@@ -93,7 +93,7 @@ pub fn noise_2d(hash_state: &RandomState, location: Vector2<f32>, debug: bool) -
     );
 }
 
-pub fn perlin_layer_2d(hash_state: &RandomState, location: Vector2<f32>, debug: bool) -> f32 {
+pub fn perlin_layer_2d(hash_state: &RandomState, location: Vector2<f32>, _debug: bool) -> f32 {
     // Produces noise according to a single octave of the perlin noise algorithm
     let x_floor = location.x.floor();
     let y_floor = location.y.floor();
@@ -108,14 +108,21 @@ pub fn perlin_layer_2d(hash_state: &RandomState, location: Vector2<f32>, debug: 
         hash_i32_vec2_to_f32_vec2(hash_state, Vector2::new(x_floor as i32, y_ceil as i32));
     let lr_grad = hash_i32_vec2_to_f32_vec2(hash_state, Vector2::new(x_ceil as i32, y_ceil as i32));
 
+    if _debug {
+        println!("ul: ({}, {}) ur: ({}, {}) ll: ({}, {}) lr: ({}, {})", ul_grad.x, ul_grad.y, ur_grad.x, ur_grad.y, ll_grad.x, ll_grad.y, lr_grad.x, lr_grad.y);
+    }
+
     let ul_value = ul_grad.dot(Vector2::new(location.x - x_floor, location.y - y_floor));
     let ur_value = ur_grad.dot(Vector2::new(location.x - x_ceil, location.y - y_floor));
     let ll_value = ll_grad.dot(Vector2::new(location.x - x_floor, location.y - y_ceil));
     let lr_value = lr_grad.dot(Vector2::new(location.x - x_ceil, location.y - y_ceil));
 
-    return lerp(
-        fade(location.y - y_floor),
-        lerp(fade(location.x - x_floor), ul_value, ur_value),
-        lerp(fade(location.x - x_floor), ll_value, lr_value),
+    let u = fade(location.x - x_floor);
+    let v = fade(location.y - y_floor);
+
+
+    return lerp(v,
+        lerp(u, ul_value, ur_value),
+        lerp(u, ll_value, lr_value)
     );
 }
