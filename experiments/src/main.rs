@@ -48,7 +48,6 @@ fn main() {
 
     // Generate an image of a single layer of perlin noise
     let mut imgbuf = image::RgbImage::new(imgx, imgy);
-    let mut values = Vec::<f32>::new();
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
         let value = base_noise::perlin_layer_2d(
             &s,
@@ -63,9 +62,29 @@ fn main() {
         } else {
             *pixel = image::Rgb([0, 255, 0]);
         }
-        values.push(value);
     }
     imgbuf.save("perlin_2d.png").unwrap();
+
+
+    // Generate "multi-octave" perlin noise
+    // Probably doesn't meet the formal definition
+    let mut imgbuf = image::RgbImage::new(imgx, imgy);
+    for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
+        let mut value = 0.0;
+        value += 0.5 * base_noise::perlin_layer_2d(&s, Vector2::new(x as f32 / 200.0, y as f32 / 200.0), false);
+        value += 0.25 * base_noise::perlin_layer_2d(&s, Vector2::new(x as f32 / 100.0, y as f32 / 100.0), false);
+        value += 0.125 * base_noise::perlin_layer_2d(&s, Vector2::new(x as f32 / 50.0, y as f32 / 50.0), false);
+        value += 0.0625 * base_noise::perlin_layer_2d(&s, Vector2::new(x as f32 / 25.0, y as f32 / 25.0), false);
+        if value < -0.001 {
+            *pixel = image::Rgb([(-1.0 * value * 255.0).floor() as u8, 0, 0]);
+        } else if value > 0.001 {
+            *pixel = image::Rgb([0, 0, (value * 255.0).floor() as u8]);
+        } else {
+            *pixel = image::Rgb([0, 255, 0]);
+        }
+    }
+    imgbuf.save("perlin_2d_multi.png").unwrap();
+
 
     // TODO: ideas to try
     // * when the random vector at each grid point had only positive components,
