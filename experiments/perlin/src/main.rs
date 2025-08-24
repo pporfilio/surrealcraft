@@ -58,7 +58,7 @@ fn main() {
         if value < -0.01 {
             *pixel = image::Rgb([(-1.0 * value * 255.0).floor() as u8, 0, 0]);
         } else if value > 0.01 {
-            *pixel = image::Rgb([0, 0, (value * 255.0).floor() as u8]);
+            *pixel = image::Rgb([[0, 0, (value * 255.0).floor() as u8]);
         } else {
             *pixel = image::Rgb([0, 255, 0]);
         }
