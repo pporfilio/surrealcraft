@@ -303,9 +303,17 @@ fn perlin_layer_3d_draft_1(hash_state: &RandomState, location: Vector3<f32>, deb
         Vector3::new(d.x, 1.0 - d.y, 1.0 - d.z).dot(hash_vector(&s, x_ceil, y_floor, z_floor));
 
     if debug {
-        println!("x_floor {},\tx_ceil {},\tx_fade {},\tfloor_hash {},\tceil_hash {},\tfloor_grad {},\tceil_grad {},\tresult {}",
-                x_floor, x_ceil, x_fade, floor_hash.x, ceil_hash.x, floor_grad, ceil_grad,
-                lerp(x_fade, floor_grad, ceil_grad));
+        println!(
+            "x_floor {},\tx_ceil {},\tx_fade {},\tfloor_hash {},\tceil_hash {},\tfloor_grad {},\tceil_grad {},\tresult {}",
+            x_floor,
+            x_ceil,
+            x_fade,
+            floor_hash.x,
+            ceil_hash.x,
+            floor_grad,
+            ceil_grad,
+            lerp(x_fade, floor_grad, ceil_grad)
+        );
     }
 
     let result = lerp(
