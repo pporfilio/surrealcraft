@@ -2399,6 +2399,7 @@ name = "wave_function_collapse"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bytemuck",
  "env_logger",
  "image",
  "log",
