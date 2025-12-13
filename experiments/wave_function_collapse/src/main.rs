@@ -14,6 +14,25 @@ use winit::{
 
 use wave_function_collapse::{INDICES, VERTICES, Vertex};
 
+pub fn fill_demo_image(img: &mut image::RgbaImage) {
+    let imgx = img.width();
+    let imgy = img.height();
+    let step = 100;
+    let x_steps = imgx / step;
+    let y_steps = imgy / step;
+    println!("x_steps {} y_steps {}", x_steps, y_steps);
+    for x in 0..x_steps {
+        for y in 0..y_steps {
+            let subimage = image::RgbaImage::from_pixel(
+                imgx,
+                imgy,
+                image::Rgba([255 / (x + 1) as u8, 255 / (y + 1) as u8, 0, 255]),
+            );
+            image::imageops::replace(img, &subimage, (x * step) as i64, (y * step) as i64);
+        }
+    }
+}
+
 // This will store the state of our game
 pub struct State {
     surface: wgpu::Surface<'static>,
@@ -26,6 +45,8 @@ pub struct State {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     num_indices: u32,
+    diffuse_rgba: image::RgbaImage,
+    diffuse_bind_group: wgpu::BindGroup,
 }
 
 // Rendering based on https://sotrh.github.io/learn-wgpu/beginner/
@@ -85,10 +106,119 @@ impl State {
         // });
         let shader = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
 
+        let imgx = 800;
+        let imgy = 800;
+        let initial_color = image::Rgba([255, 255, 255, 255]);
+        let mut diffuse_rgba = image::RgbaImage::from_pixel(imgx, imgy, initial_color);
+
+        fill_demo_image(&mut diffuse_rgba);
+
+        let texture_size = wgpu::Extent3d {
+            width: imgx,
+            height: imgy,
+            // All textures are stored as 3D, we represent our 2D texture
+            // by setting depth to 1.
+            depth_or_array_layers: 1,
+        };
+
+        let diffuse_texture = device.create_texture(&wgpu::TextureDescriptor {
+            size: texture_size,
+            mip_level_count: 1, // We'll talk about this a little later
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            // Most images are stored using sRGB, so we need to reflect that here.
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            // TEXTURE_BINDING tells wgpu that we want to use this texture in shaders
+            // COPY_DST means that we want to copy data to this texture
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            label: Some("diffuse_texture"),
+            // This is the same as with the SurfaceConfig. It
+            // specifies what texture formats can be used to
+            // create TextureViews for this texture. The base
+            // texture format (Rgba8UnormSrgb in this case) is
+            // always supported. Note that using a different
+            // texture format is not supported on the WebGL2
+            // backend.
+            view_formats: &[],
+        });
+
+        // We don't need to configure the texture view much, so let's
+        // let wgpu define it.
+        let diffuse_texture_view =
+            diffuse_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let diffuse_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let texture_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            multisampled: false,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        // This should match the filterable field of the
+                        // corresponding Texture entry above.
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+                label: Some("texture_bind_group_layout"),
+            });
+
+        let diffuse_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &texture_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&diffuse_sampler),
+                },
+            ],
+            label: Some("diffuse_bind_group"),
+        });
+
+        queue.write_texture(
+            // Tells wgpu where to copy the pixel data
+            wgpu::TexelCopyTextureInfo {
+                texture: &diffuse_texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            // The actual pixel data
+            &diffuse_rgba,
+            // The layout of the texture
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * imgx), // May need to be a multiple of 256?
+                rows_per_image: Some(imgy),
+            },
+            texture_size,
+        );
+
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
+                bind_group_layouts: &[&texture_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -158,6 +288,8 @@ impl State {
             vertex_buffer,
             index_buffer,
             num_indices,
+            diffuse_rgba,
+            diffuse_bind_group,
         })
     }
 
@@ -226,6 +358,7 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
@@ -325,8 +458,8 @@ fn main() {
     let imgx = 800;
     let imgy = 800;
 
-    let initial_color = image::Rgb([255, 255, 255]);
-    let mut imgbuf = image::RgbImage::from_pixel(imgx, imgy, initial_color);
+    let initial_color = image::Rgba([255, 255, 255, 255]);
+    let mut imgbuf = image::RgbaImage::from_pixel(imgx, imgy, initial_color);
 
     let step = 100;
     let x_steps = imgx / step;
@@ -334,10 +467,10 @@ fn main() {
     println!("x_steps {} y_steps {}", x_steps, y_steps);
     for x in 0..x_steps {
         for y in 0..y_steps {
-            let subimage = image::RgbImage::from_pixel(
+            let subimage = image::RgbaImage::from_pixel(
                 imgx,
                 imgy,
-                image::Rgb([255 / (x + 1) as u8, 255 / (y + 1) as u8, 0]),
+                image::Rgba([255 / (x + 1) as u8, 255 / (y + 1) as u8, 0, 255]),
             );
             image::imageops::replace(&mut imgbuf, &subimage, (x * step) as i64, (y * step) as i64);
         }
