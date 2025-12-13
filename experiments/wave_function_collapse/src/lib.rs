@@ -1,12 +1,12 @@
 #[repr(C)]
 // bytemuck::Pod is for "plain old data" and lets us get a &u8 pointer to arbitrary data, I think
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct Vertex {
+pub struct Vertex {
     position: [f32; 3],
     color: [f32; 3],
 }
 
-const VERTICES: &[Vertex] = &[
+pub const VERTICES: &[Vertex] = &[
     Vertex {
         position: [0.0, 0.5, 0.0],
         color: [1.0, 0.0, 0.0],
@@ -22,7 +22,7 @@ const VERTICES: &[Vertex] = &[
 ];
 
 impl Vertex {
-    fn desc() -> wgpu::VertexBufferLayout<'static> {
+    pub fn desc() -> wgpu::VertexBufferLayout<'static> {
         wgpu::VertexBufferLayout {
             array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
             step_mode: wgpu::VertexStepMode::Vertex,
