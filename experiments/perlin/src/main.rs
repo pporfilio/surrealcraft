@@ -58,13 +58,12 @@ fn main() {
         if value < -0.01 {
             *pixel = image::Rgb([(-1.0 * value * 255.0).floor() as u8, 0, 0]);
         } else if value > 0.01 {
-            *pixel = image::Rgb([[0, 0, (value * 255.0).floor() as u8]);
+            *pixel = image::Rgb([0, 0, (value * 255.0).floor() as u8]);
         } else {
             *pixel = image::Rgb([0, 255, 0]);
         }
     }
     imgbuf.save("perlin_2d.png").unwrap();
-
 
     // Generate "multi-octave" perlin noise
     // Probably doesn't meet the formal definition
@@ -84,7 +83,6 @@ fn main() {
         }
     }
     imgbuf.save("perlin_2d_multi.png").unwrap();
-
 
     // TODO: ideas to try
     // * when the random vector at each grid point had only positive components,
