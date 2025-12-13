@@ -14,26 +14,8 @@ use winit::{
 
 use wave_function_collapse::{INDICES, VERTICES, Vertex};
 
+mod alg;
 mod texture;
-
-pub fn fill_demo_image(img: &mut image::RgbaImage) {
-    let imgx = img.width();
-    let imgy = img.height();
-    let step = 100;
-    let x_steps = imgx / step;
-    let y_steps = imgy / step;
-    println!("x_steps {} y_steps {}", x_steps, y_steps);
-    for x in 0..x_steps {
-        for y in 0..y_steps {
-            let subimage = image::RgbaImage::from_pixel(
-                imgx,
-                imgy,
-                image::Rgba([255 / (x + 1) as u8, 255 / (y + 1) as u8, 0, 255]),
-            );
-            image::imageops::replace(img, &subimage, (x * step) as i64, (y * step) as i64);
-        }
-    }
-}
 
 // This will store the state of our game
 pub struct State {
@@ -47,7 +29,7 @@ pub struct State {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     num_indices: u32,
-    diffuse_rgba: image::RgbaImage,
+    demo_state: alg::DemoState,
     diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: texture::Texture,
 }
@@ -113,8 +95,9 @@ impl State {
         let imgy = 800;
         let initial_color = image::Rgba([255, 255, 255, 255]);
         let mut diffuse_rgba = image::RgbaImage::from_pixel(imgx, imgy, initial_color);
+        let demo_state = alg::DemoState::new(diffuse_rgba, 100);
 
-        fill_demo_image(&mut diffuse_rgba);
+        // alg::fill_demo_image(&mut diffuse_rgba);
 
         let texture_size = wgpu::Extent3d {
             width: imgx,
@@ -128,7 +111,7 @@ impl State {
         // The issue seemed to be that ImageRgba8 moves the value but then we tried
         // to use diffuse_rgba later to return it as part of the State struct which
         // wasn't allowed.
-        let diffuse_dynamic = image::DynamicImage::ImageRgba8(diffuse_rgba.clone());
+        let diffuse_dynamic = image::DynamicImage::ImageRgba8(demo_state.img.clone());
 
         let diffuse_texture =
             texture::Texture::from_image(&device, &queue, &diffuse_dynamic, Some("test_image"))
@@ -247,7 +230,7 @@ impl State {
             vertex_buffer,
             index_buffer,
             num_indices,
-            diffuse_rgba,
+            demo_state,
             diffuse_bind_group,
             diffuse_texture,
         })
