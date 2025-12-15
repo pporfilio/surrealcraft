@@ -6,11 +6,9 @@ use std::hash::{BuildHasher, Hasher};
 
 fn u64_to_f32(x: u64) -> f32 {
     // Hash values are always u64, but I want an f32 between 0 and 1.
-    // Convert to value within range of u32, but store as an f64 to maintain
-    // full precision
-    // Update: I'm not sure why I did it exactly like this and of course there are
-    // collisions, both due to the mod and probably for adjacent values because of
-    // the downcast to f32.
+    // Convert to value within range of u32. I'm unsure the best way to do
+    // this and of course there are collisions, but works
+    // well enough for my situation.
     let x = x % u32::MAX as u64;
     return (x as f64 / u32::MAX as f64) as f32;
 }
@@ -22,7 +20,7 @@ fn hash_i32_to_f32_value(hash_state: &RandomState, value: i32) -> f32 {
 }
 
 fn hash_i32_vec2_to_f32_value(hash_state: &RandomState, vector: Vector2<i32>) -> f32 {
-    // Maps a point at integer coordinates to an arbitrary
+    // Maps a point at integer coordinates to an arbitrary float value.
     let mut hasher = hash_state.build_hasher();
     hasher.write_i32(vector.x);
     hasher.write_i32(vector.y);

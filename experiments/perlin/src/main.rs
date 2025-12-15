@@ -56,12 +56,10 @@ fn perlin_value_to_color(
     perlin_multiplier = 1.0 - (1.0 - perlin_multiplier).powf(blend_curve_exponent);
 
     // If zero_rgb is (0, 0, 0) then both cases should behave the same
-    let mut result_float_color = Vector3::new(0.0, 0.0, 0.0);
+    let mut result_float_color = perlin_multiplier * current_color;
     if blend_zero {
         result_float_color =
             perlin_multiplier * current_color + (1.0 - perlin_multiplier) * zero_rgb;
-    } else {
-        result_float_color = perlin_multiplier * current_color;
     }
 
     return image::Rgb([
@@ -79,18 +77,18 @@ fn main() {
     let s = RandomState::with_seeds(6791, 33423, 1243893479, 1223);
 
     // Debug colors
-    // let negative_rgb = Vector3::new(1.0, 0.0, 0.0);
-    // let zero_rgb = Vector3::new(0.0, 1.0, 0.0);
-    // let positive_rgb = Vector3::new(0.0, 0.0, 1.0);
-    // let blend_zero = false;
-    // let blend_curve_exponent = 1.0;
+    let negative_rgb = Vector3::new(1.0, 0.0, 0.0);
+    let zero_rgb = Vector3::new(0.0, 1.0, 0.0);
+    let positive_rgb = Vector3::new(0.0, 0.0, 1.0);
+    let blend_zero = false;
+    let blend_curve_exponent = 1.0;
 
     // Landscape colors
-    let negative_rgb = Vector3::new(0.09, 0.42, 0.0);
-    let zero_rgb = Vector3::new(0.123, 0.22, 0.64);
-    let positive_rgb = Vector3::new(0.0, 0.65, 0.08);
-    let blend_zero = true;
-    let blend_curve_exponent = 10.0;
+    // let negative_rgb = Vector3::new(0.09, 0.42, 0.0);
+    // let zero_rgb = Vector3::new(0.123, 0.22, 0.64);
+    // let positive_rgb = Vector3::new(0.0, 0.65, 0.08);
+    // let blend_zero = true;
+    // let blend_curve_exponent = 10.0;
 
     let imgx = 800;
     let imgy = 800;
