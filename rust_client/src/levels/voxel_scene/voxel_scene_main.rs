@@ -5,7 +5,7 @@ use crate::geometry::buffers::{
     geometry_buffers_from_mesh, GeometryBuffers, Instance, RenderEntity,
 };
 use crate::geometry::geometry::triangles_from_voxel_data;
-use crate::geometry::voxels::voxel_data_from_file;
+use crate::geometry::voxels::{voxel_data_from_file, voxel_test_geometry};
 use crate::levels::scene::{default_camera, default_motion, Scene};
 use std::collections::VecDeque;
 

@@ -131,30 +131,31 @@ pub fn default_get_camera_position_delta(
     input_state: &InputState,
     delta_s: f32,
 ) -> cgmath::Vector3<f32> {
+    let speed = 5.0;
     let mut delta_forward: f32 = 0.0;
     let mut delta_up: f32 = 0.0;
     let mut delta_right: f32 = 0.0;
     if input_state.key_pressed(&VirtualKeyCode::W) || input_state.key_pressed(&VirtualKeyCode::Up) {
-        delta_forward += delta_s;
+        delta_forward += delta_s * speed;
     }
     if input_state.key_pressed(&VirtualKeyCode::S) || input_state.key_pressed(&VirtualKeyCode::Down)
     {
-        delta_forward -= delta_s;
+        delta_forward -= delta_s * speed;
     }
     if input_state.key_pressed(&VirtualKeyCode::D)
         || input_state.key_pressed(&VirtualKeyCode::Right)
     {
-        delta_right += delta_s;
+        delta_right += delta_s * speed;
     }
     if input_state.key_pressed(&VirtualKeyCode::A) || input_state.key_pressed(&VirtualKeyCode::Left)
     {
-        delta_right -= delta_s;
+        delta_right -= delta_s * speed;
     }
     if input_state.key_pressed(&VirtualKeyCode::Q) {
-        delta_up += delta_s;
+        delta_up += delta_s * speed;
     }
     if input_state.key_pressed(&VirtualKeyCode::E) {
-        delta_up -= delta_s;
+        delta_up -= delta_s * speed;
     }
 
     delta_forward * camera.look_vector()

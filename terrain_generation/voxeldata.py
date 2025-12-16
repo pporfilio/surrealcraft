@@ -12,6 +12,8 @@ def parse_args():
     args = parser.parse_args()
     return args
 
+MAX_HEIGHT = 60
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -19,15 +21,15 @@ if __name__ == "__main__":
     image = Image.open(path)
     a = np.array(image)
 
-    vd = np.zeros((15, a.shape[0], a.shape[1], 4), dtype=np.uint8)
+    vd = np.zeros((MAX_HEIGHT, a.shape[0], a.shape[1], 4), dtype=np.uint8)
 
     if args.with_heightmap:
         # Heightmap should be grayscale 0-255
         heightmap = Image.open(args.with_heightmap)
-        # divide by 255 and multiply by 15 to get the scale to 15
-        intensity = 1 + (np.array(heightmap, dtype=np.float32) / 255.0) * 14
+        # divide by 255 and multiply by MAX_HEIGHT to get the scale to MAX_HEIGHT
+        intensity = 1 + (np.array(heightmap, dtype=np.float32) / 255.0) * (MAX_HEIGHT - 1)
     else:
-        # intensities range from 0 to 15
+        # intensities range from 0 to MAX_HEIGHT
         intensity = np.sum(a[:, :, :3], axis=2) * 5 / 255
 
     # This layer is to determine if we have a voxel here or not
@@ -40,7 +42,7 @@ if __name__ == "__main__":
     print(intensity1.shape)
     print(intensity3.shape)
 
-    for i in range(15):
+    for i in range(MAX_HEIGHT):
         # For this layer, if the intensity is greater than i, then copy the rgb
         # from the image into this layer.
         vd[i, :, :, 1:] = np.where(intensity3 > i, a[:, :, :3], 0)
