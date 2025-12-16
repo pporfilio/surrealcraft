@@ -27,7 +27,7 @@ impl Scene for VoxelScene {
         device: &wgpu::Device,
     ) -> (Vec<RenderEntity>, Vec<GeometryBuffers>) {
         let vd =
-            voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\island_small.vd")
+            voxel_data_from_file("C:\\source\\surrealcraft\\terrain_generation\\perlin_terrain.vd")
                 .unwrap();
 
         // let vd = voxel_test_geometry();

@@ -120,6 +120,7 @@ fn main() {
     // Generate "multi-octave" perlin noise
     // Probably doesn't meet the formal definition
     let mut imgbuf = image::RgbImage::new(imgx, imgy);
+    let mut heightmap = image::GrayImage::new(imgx, imgy);
     for (x, y, pixel) in imgbuf.enumerate_pixels_mut() {
         let mut value = 0.0;
         value += 0.5
@@ -146,6 +147,7 @@ fn main() {
                 Vector2::new(x as f32 / 25.0, y as f32 / 25.0),
                 false,
             );
+
         *pixel = perlin_value_to_color(
             value,
             negative_rgb,
@@ -154,8 +156,10 @@ fn main() {
             blend_zero,
             blend_curve_exponent,
         );
+        heightmap.put_pixel(x, y, image::Luma([(value.abs() * 255.0) as u8]));
     }
     imgbuf.save("perlin_2d_multi.png").unwrap();
+    heightmap.save("perlin_2d_multi_heightmap.png").unwrap();
 
     // TODO: ideas to try
     // * when the random vector at each grid point had only positive components,

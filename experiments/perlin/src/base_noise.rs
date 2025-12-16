@@ -142,6 +142,7 @@ pub fn perlin_layer_2d(hash_state: &RandomState, location: Vector2<f32>, _debug:
     // the original permutation table. This also means that the pattern does not repeat/tile
     // Also uses the old version of random gradient vectors (rather than a set of 12 from improved
     // Perlin noise).
+    // Results seem to be in the range -0.5 to 0.5
     // But does use the updated smoothstep function.
     let x_floor = location.x.floor();
     let y_floor = location.y.floor();
