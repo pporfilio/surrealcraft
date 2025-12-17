@@ -432,10 +432,14 @@ impl ApplicationHandler<State> for App {
             return;
         }
 
-        #[allow(unused_mut)]
         let mut window_attributes = Window::default_attributes();
+        window_attributes.visible = true;
+        window_attributes.active = true;
+
 
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
+
+        window.focus_window();
 
         // TODO: Why are we doing this unconditionally in `resumed`, which can be
         // called multiple times?
