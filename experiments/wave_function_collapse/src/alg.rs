@@ -1,5 +1,6 @@
 use cgmath::Vector2;
 use image;
+use image::{ImageError, ImageReader};
 
 pub struct DemoState {
     pub img: image::RgbaImage,
@@ -82,16 +83,42 @@ pub fn fill_demo_image(img: &mut image::RgbaImage) {
 }
 
 pub struct WFCState {
-    pub img: image::RgbaImage,
+    pub sample_image_rgba: image::RgbaImage,
+    pub generated_image_rgba: image::RgbaImage,
+}
+
+pub struct SourceCell {
+    pub id: u32,
+    pub ul_x: u32,
+    pub ul_y: u32,
 }
 
 impl WFCState {
-    pub fn new(img: image::RgbaImage) -> Self {
-        Self { img }
+    pub fn new(
+        sample_image_path: &str,
+        cell_width: u32,
+        cell_height: u32,
+        output_cells_x: u32,
+        output_cells_y: u32,
+    ) -> Result<Self, ImageError> {
+        let sample_image = ImageReader::open(sample_image_path)?.decode()?;
+        let sample_image_rgba = sample_image.to_rgba8();
+
+        let initial_color = image::Rgba([255, 255, 255, 255]);
+        let generated_image_rgba = image::RgbaImage::from_pixel(
+            output_cells_x * cell_width,
+            output_cells_y * cell_height,
+            initial_color,
+        );
+
+        Ok(Self {
+            sample_image_rgba,
+            generated_image_rgba,
+        })
     }
 
     pub fn next(&mut self) -> &image::RgbaImage {
-        return &self.img;
+        return &self.generated_image_rgba;
     }
 }
 
