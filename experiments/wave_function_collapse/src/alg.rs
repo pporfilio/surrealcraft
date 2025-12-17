@@ -1,6 +1,5 @@
-use image;
 use cgmath::Vector2;
-
+use image;
 
 pub struct DemoState {
     pub img: image::RgbaImage,
@@ -82,16 +81,13 @@ pub fn fill_demo_image(img: &mut image::RgbaImage) {
     }
 }
 
-
 pub struct WFCState {
     pub img: image::RgbaImage,
 }
 
 impl WFCState {
     pub fn new(img: image::RgbaImage) -> Self {
-        Self {
-            img,
-        }
+        Self { img }
     }
 
     pub fn next(&mut self) -> &image::RgbaImage {
@@ -99,7 +95,7 @@ impl WFCState {
     }
 }
 
-    // https://stackoverflow.com/questions/16421033/lazy-sequence-generation-in-rust
+// https://stackoverflow.com/questions/16421033/lazy-sequence-generation-in-rust
 pub struct Range2D {
     x_start: i32,
     x_current: i32,
@@ -110,16 +106,26 @@ pub struct Range2D {
 }
 
 impl Range2D {
+    /// Creates a new Range2D iterator.
+    ///
+    /// # Arguments
+    /// * `x_start` - Starting x-coordinate (inclusive)
+    /// * `x_end` - Ending x-coordinate (exclusive)
+    /// * `y_start` - Starting y-coordinate (inclusive)
+    /// * `y_end` - Ending y-coordinate (exclusive)
+    ///
+    /// # Panics
+    /// Panics if any start is greater than its corresponding end.
     pub fn new(x_start: i32, x_end: i32, y_start: i32, y_end: i32) -> Self {
-        let x_current = x_start;
-        let y_current = y_start;
+        assert!(x_start <= x_end, "x_start must be <= x_end");
+        assert!(y_start <= y_end, "y_start must be <= y_end");
         Self {
-            x_start: x_start,
-            x_current: x_current,
-            x_end: x_end,
-            y_start: y_start,
-            y_current: y_current,
-            y_end: y_end,
+            x_start,
+            x_current: x_start,
+            x_end,
+            y_start,
+            y_current: y_start,
+            y_end,
         }
     }
 }
@@ -128,20 +134,49 @@ impl Iterator for Range2D {
     type Item = Vector2<i32>;
 
     fn next(&mut self) -> Option<Vector2<i32>> {
-        if self.x_start >= self.x_end || self.y_start >= self.y_end {
-            // Starting condition wasn't valid
-            None
-        } else if self.x_current >= self.x_end {
+        if self.x_current >= self.x_end {
             // We've completed the iteration
             None
         } else {
+            // Get the current position
             let result = Vector2::new(self.x_current, self.y_current);
+
+            // Move to the next position after storing the current, so that
+            // we are inclusive of the starting position.
             self.y_current += 1;
             if self.y_current >= self.y_end {
                 self.y_current = self.y_start;
                 self.x_current += 1;
             }
+
             return Some(result);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_range2d_iteration() {
+        let mut iter = Range2D::new(0, 2, 0, 2);
+        assert_eq!(iter.next(), Some(Vector2::new(0, 0)));
+        assert_eq!(iter.next(), Some(Vector2::new(0, 1)));
+        assert_eq!(iter.next(), Some(Vector2::new(1, 0)));
+        assert_eq!(iter.next(), Some(Vector2::new(1, 1)));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    #[should_panic(expected = "x_start must be <= x_end")]
+    fn test_invalid_range_x() {
+        let _ = Range2D::new(2, 1, 0, 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "y_start must be <= y_end")]
+    fn test_invalid_range_y() {
+        let _ = Range2D::new(0, 1, 2, 1);
     }
 }
