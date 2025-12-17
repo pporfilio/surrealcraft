@@ -105,7 +105,8 @@ impl State {
         );
 
         // Make sure that if you add new instances to the Vec, you recreate the
-        // instance_buffer as well as camera_bind_group. Otherwise, your new instances        // won't show up correctly.
+        // instance_buffer as well as camera_bind_group. Otherwise, your new instances
+        // won't show up correctly.
         let mut instances = Vec::<Instance>::new();
         instances.push(Instance {
             scale: cgmath::Vector2 { x: 1.0, y: 1.0 },
@@ -121,12 +122,7 @@ impl State {
             texture_index: 0,
         });
 
-        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
-        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Instance Buffer"),
-            contents: bytemuck::cast_slice(&instance_data),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
+        let instance_buffer = Self::create_instance_buffer(&device, &instances);
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
@@ -275,6 +271,15 @@ impl State {
         });
     }
 
+    pub fn create_instance_buffer(device: &wgpu::Device, instances: &Vec<Instance>) -> wgpu::Buffer {
+        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+        return device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&instance_data),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+    }
+
     pub fn resize(&mut self, width: u32, height: u32) {
         if width > 0 && height > 0 {
             self.surface_config.width = width;
@@ -327,21 +332,9 @@ impl State {
             texture_index: 1,
         });
 
-        let instance_data = self
-            .instances
-            .iter()
-            .map(Instance::to_raw)
-            .collect::<Vec<_>>();
-
         // TODO: destroy self.instance_buffer
 
-        self.instance_buffer = self
-            .device
-            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Instance Buffer"),
-                contents: bytemuck::cast_slice(&instance_data),
-                usage: wgpu::BufferUsages::VERTEX,
-            });
+        self.instance_buffer = State::create_instance_buffer(&self.device, &self.instances);
     }
 
     pub fn update(&mut self) {
