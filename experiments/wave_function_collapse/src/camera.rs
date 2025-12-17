@@ -253,26 +253,50 @@ impl OrthoCamera2D {
                 self.is_right_pressed = is_pressed;
                 true
             }
+            KeyCode::KeyQ => {
+                self.is_zoom_in_pressed = is_pressed;
+                true
+            }
+            KeyCode::KeyE => {
+                self.is_zoom_out_pressed = is_pressed;
+                true
+            }
             _ => false,
         }
     }
 
     pub fn update_camera(&mut self) {
+        let vertical_speed = (self.top - self.bottom) * 0.05;
+        let horizontal_speed = (self.right - self.left) * 0.05;
         if self.is_up_pressed {
-            self.eye += cgmath::Vector3::new(0.0, self.speed, 0.0);
-            self.target += cgmath::Vector3::new(0.0, self.speed, 0.0);
+            self.eye += cgmath::Vector3::new(0.0, vertical_speed, 0.0);
+            self.target += cgmath::Vector3::new(0.0, vertical_speed, 0.0);
         }
         if self.is_down_pressed {
-            self.eye -= cgmath::Vector3::new(0.0, self.speed, 0.0);
-            self.target -= cgmath::Vector3::new(0.0, self.speed, 0.0);
+            self.eye -= cgmath::Vector3::new(0.0, vertical_speed, 0.0);
+            self.target -= cgmath::Vector3::new(0.0, vertical_speed, 0.0);
         }
         if self.is_right_pressed {
-            self.eye += cgmath::Vector3::new(self.speed, 0.0, 0.0);
-            self.target += cgmath::Vector3::new(self.speed, 0.0, 0.0);
+            self.eye += cgmath::Vector3::new(horizontal_speed, 0.0, 0.0);
+            self.target += cgmath::Vector3::new(horizontal_speed, 0.0, 0.0);
         }
         if self.is_left_pressed {
-            self.eye -= cgmath::Vector3::new(self.speed, 0.0, 0.0);
-            self.target -= cgmath::Vector3::new(self.speed, 0.0, 0.0);
+            self.eye -= cgmath::Vector3::new(horizontal_speed, 0.0, 0.0);
+            self.target -= cgmath::Vector3::new(horizontal_speed, 0.0, 0.0);
+        }
+        if self.is_zoom_in_pressed {
+            let zoom_in_speed = 0.975;
+            self.left *= zoom_in_speed;
+            self.right *= zoom_in_speed;
+            self.top *= zoom_in_speed;
+            self.bottom *= zoom_in_speed;
+        }
+        if self.is_zoom_out_pressed {
+            let zoom_out_speed = 1.025;
+            self.left *= zoom_out_speed;
+            self.right *= zoom_out_speed;
+            self.top *= zoom_out_speed;
+            self.bottom *= zoom_out_speed;
         }
     }
 }
