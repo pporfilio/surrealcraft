@@ -298,8 +298,6 @@ impl State {
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        self.window.request_redraw();
-
         // We can't render unless the surface is configured
         if !self.is_surface_configured {
             return Ok(());
@@ -353,6 +351,10 @@ impl State {
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();
 
+        // Unsure if better to request at the end. Rendering might
+        // be blocking the event loop anyway.
+        self.window.request_redraw();
+
         Ok(())
     }
 }
@@ -372,6 +374,12 @@ impl App {
 
 impl ApplicationHandler<State> for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+        // Return if we've already initialized
+        if self.state.is_some() {
+            println!("Resumed called when state already exists.");
+            return;
+        }
+
         #[allow(unused_mut)]
         let mut window_attributes = Window::default_attributes();
 
@@ -401,7 +409,11 @@ impl ApplicationHandler<State> for App {
 
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
-            WindowEvent::Resized(size) => state.resize(size.width, size.height),
+            WindowEvent::Resized(size) => {
+                state.resize(size.width, size.height);
+                // Didn't seem to help so much with graphics being squished for a frame before resizing...
+                state.window.request_redraw();
+            }
             WindowEvent::RedrawRequested => {
                 state.update();
                 match state.render() {
