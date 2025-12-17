@@ -1,6 +1,9 @@
 use cgmath::Vector2;
 use image;
 use image::{ImageError, ImageReader, SubImage};
+use rand::prelude::IteratorRandom;
+use rand::rngs::StdRng;
+use rand::{Rng, SeedableRng};
 use std::collections::{HashMap, HashSet};
 use std::thread::current;
 
@@ -92,6 +95,10 @@ pub struct WFCState {
     pub output_cells_x: u32,
     pub output_cells_y: u32,
     pub sample_cell_id_to_info: HashMap<u32, SampleCellInfo>,
+    pub output_cell_ids: Vec<i32>,
+    pub next_locations: Range2D,
+    pub all_ids: HashSet<u32>,
+    pub rng: StdRng,
 }
 #[derive(Clone)]
 pub struct SampleCellInfo {
@@ -128,6 +135,14 @@ impl WFCState {
 
         let sample_cell_id_to_info = HashMap::new();
 
+        let output_cell_ids = vec![-1; (output_cells_x * output_cells_y) as usize];
+
+        let next_locations = Range2D::new(0, output_cells_x as i32, 0, output_cells_y as i32);
+
+        let all_ids = HashSet::new();
+
+        let rng = StdRng::seed_from_u64(1234567);
+
         Self {
             sample_image_rgba,
             generated_image_rgba,
@@ -136,6 +151,10 @@ impl WFCState {
             output_cells_x,
             output_cells_y,
             sample_cell_id_to_info,
+            output_cell_ids,
+            next_locations,
+            all_ids,
+            rng,
         }
     }
 
@@ -183,6 +202,7 @@ impl WFCState {
                         locations: Vec::new(),
                         adjacencies: HashSet::new(),
                     };
+                    self.all_ids.insert(current_cell_id);
                     // Update the cell id inside the closure so that it's only updated when we make a new entry
                     current_cell_id += 1;
                     return new_cell;
@@ -284,8 +304,83 @@ impl WFCState {
         );
     }
 
-    pub fn next(&mut self) -> &image::RgbaImage {
-        return &self.generated_image_rgba;
+    pub fn step_algorithm(&mut self) {
+        // Get the next location to visit
+        let Some(current_location_i32) = self.next_locations.next() else {
+            return;
+        };
+
+        let current_location = Vector2 {
+            x: current_location_i32.x as u32,
+            y: current_location_i32.y as u32,
+        };
+        let mut available_ids = self.all_ids.clone();
+
+        // Get the coordinates adjacent to that location
+        println!("Checking adjacent coordinates");
+        for coordinates in WFCState::adjacent_cell_coordinates(
+            current_location,
+            self.output_cells_x,
+            self.output_cells_y,
+        ) {
+            // Get the allowed adjacent ids for the id at each adjacent location
+            // If the id is -1, all ids are allowed, so can skip this
+            // To get the allowed adjacent ids, look up in sample_id_to_info
+            print!("coordinates: {}, {}", coordinates.x, coordinates.y);
+            let id_at_coordinate = self.output_cell_ids
+                [(coordinates.y * self.output_cells_x + coordinates.x) as usize];
+            if id_at_coordinate != -1 {
+                available_ids = &available_ids
+                    & &self
+                        .sample_cell_id_to_info
+                        .get(&(id_at_coordinate as u32))
+                        .unwrap()
+                        .adjacencies;
+            }
+            println!("Remaining id options: {:?}", available_ids);
+        }
+
+        // If it's empty, do nothing, for now
+        // TODO:
+        if available_ids.len() == 0 {
+            println!("No viable tiles!");
+            return;
+        }
+
+        // Otherwise, select an id at random
+        let picked_ref = available_ids.iter().choose(&mut self.rng).unwrap();
+
+        // Assign the id to the current location
+        self.output_cell_ids
+            [(current_location.y * self.output_cells_x + current_location.x) as usize] =
+            *picked_ref as i32;
+
+        self.update_generated_image(current_location, *picked_ref);
+    }
+
+    pub fn update_generated_image(&mut self, destination_location: Vector2<u32>, source_id: u32) {
+        let source_location = self
+            .sample_cell_id_to_info
+            .get(&source_id)
+            .unwrap()
+            .locations[0];
+
+        let cell_subimage = image::imageops::crop_imm(
+            &self.sample_image_rgba,
+            source_location.x * self.cell_width,
+            source_location.y * self.cell_height,
+            self.cell_width,
+            self.cell_height,
+        );
+
+        let cell_image: image::RgbaImage = cell_subimage.to_image();
+
+        image::imageops::replace(
+            &mut self.generated_image_rgba,
+            &cell_image,
+            (destination_location.x * self.cell_width) as i64,
+            (destination_location.y * self.cell_height) as i64,
+        );
     }
 }
 

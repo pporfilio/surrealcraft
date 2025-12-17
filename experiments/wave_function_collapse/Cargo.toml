@@ -13,7 +13,7 @@ wgpu = "26.0.1"
 pollster = "0.3"
 bytemuck = { version = "1.16", features = [ "derive" ]}
 cgmath = "0.18"
-
+rand = "0.9.2"
 
 [profile.release]
 debug = true

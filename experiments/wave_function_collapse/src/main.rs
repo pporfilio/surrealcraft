@@ -12,7 +12,7 @@ use winit::{
     window::Window,
 };
 
-use cgmath::Rotation3;
+use cgmath::{Rotation3, Vector2};
 
 use wave_function_collapse::{INDICES, Instance, InstanceRaw, VERTICES, Vertex};
 
@@ -35,6 +35,9 @@ pub struct State {
     demo_state: alg::DemoState,
     wfc_state: alg::WFCState,
     texture_array: texture::TextureArray,
+    // Partially so I don't have to handle different sized textures in the
+    // array, and partially so texture::Texture still gets used somewhere
+    generated_texture: texture::Texture,
     camera: camera::OrthoCamera2D,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
@@ -110,11 +113,17 @@ impl State {
 
         let mut texture_vec = Vec::<image::DynamicImage>::new();
         texture_vec.push(diffuse_1_dynamic);
-        texture_vec.push(diffuse_2_dynamic);
         let texture_array = texture::TextureArray::new(
             &device,
             &queue,
             texture_vec, /*, Some("texture_array")*/
+        );
+
+        let generated_texture = texture::Texture::new(
+            &device,
+            &queue,
+            diffuse_2_dynamic,
+            Some("generated texture"),
         );
 
         // Make sure that if you add new instances to the Vec, you recreate the
@@ -134,7 +143,7 @@ impl State {
             ),
             uv_offset: cgmath::Vector2::new(0.0, 0.0),
             uv_scale: cgmath::Vector2::new(1.0, 1.0),
-            texture_index: 0,
+            texture_index: 1, // TODO: my shader currently treats the texture array as 1-indexed as a hack.
         });
 
         let instance_buffer = Self::create_instance_buffer(&device, &instances);
@@ -171,6 +180,7 @@ impl State {
             &device,
             &camera_bind_group_layout,
             &texture_array.bind_group_layout,
+            &generated_texture.bind_group_layout,
             &shader,
             &surface_config,
         );
@@ -189,6 +199,7 @@ impl State {
             demo_state,
             wfc_state,
             texture_array,
+            generated_texture,
             camera,
             camera_uniform,
             camera_buffer,
@@ -234,13 +245,18 @@ impl State {
         // TODO: Probably want to pass this in as an array
         camera_bind_group_layout: &wgpu::BindGroupLayout,
         texture_array_bind_group_layout: &wgpu::BindGroupLayout,
+        generated_texture_bind_group_layout: &wgpu::BindGroupLayout,
         shader: &wgpu::ShaderModule,
         surface_config: &wgpu::SurfaceConfiguration,
     ) -> wgpu::RenderPipeline {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&camera_bind_group_layout, &texture_array_bind_group_layout],
+                bind_group_layouts: &[
+                    &camera_bind_group_layout,
+                    &texture_array_bind_group_layout,
+                    &generated_texture_bind_group_layout,
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -321,11 +337,17 @@ impl State {
     }
 
     fn step_algorithm(&mut self) {
-        alg::step_demo_image(&mut self.demo_state);
-        self.texture_array.update_single_index(
+        // alg::step_demo_image(&mut self.demo_state);
+        // self.texture_array.update_single_index(
+        //     &self.queue,
+        //     image::DynamicImage::from(self.demo_state.img.clone()),
+        //     0,
+        // );
+
+        self.wfc_state.step_algorithm();
+        self.generated_texture.update(
             &self.queue,
-            image::DynamicImage::from(self.demo_state.img.clone()),
-            0,
+            image::DynamicImage::from(self.wfc_state.generated_image_rgba.clone()),
         );
     }
 
@@ -365,7 +387,13 @@ impl State {
         let adjacent_start_offset = 1.75;
         let adjacent_scale = 0.1;
         let adjacent_step = 0.15;
-        let sample_texture_index = 0;
+
+        // Hack to have the separate texture at 0 and the array textures 1-indexed
+        // So that I can still draw everything as instanced quads and not have to
+        // pipe through another set of vertices and everything.
+        // TODO: move into texture array once array supports different size textures
+        let sample_texture_index = 1;
+        let generated_texture_index = 0;
 
         let default_rotation =
             cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0));
@@ -385,6 +413,15 @@ impl State {
             });
             cell_y_offset -= 0.5;
         }
+
+        self.instances.push(Instance {
+            scale: cgmath::Vector2::new(2.0, 2.0),
+            position: cgmath::Vector3::new(0.0, 2.0, 0.0),
+            rotation: default_rotation,
+            uv_offset: Vector2::new(0.0, 0.0),
+            uv_scale: Vector2::new(1.0, 1.0),
+            texture_index: generated_texture_index,
+        });
 
         // TODO: destroy self.instance_buffer?
         self.instance_buffer = State::create_instance_buffer(&self.device, &self.instances);
@@ -446,6 +483,7 @@ impl State {
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
             render_pass.set_bind_group(1, &self.texture_array.bind_group, &[]);
+            render_pass.set_bind_group(2, &self.generated_texture.bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);

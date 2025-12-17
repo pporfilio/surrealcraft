@@ -63,7 +63,19 @@ var texture_array: texture_2d_array<f32>;
 @group(1) @binding(1)
 var texture_array_sampler: sampler;
 
+@group(2) @binding(0)
+var generated_texture: texture_2d<f32>;
+@group(2) @binding(1)
+var generated_sampler: sampler;
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(texture_array, texture_array_sampler, in.tex_coords, in.texture_index);
+
+    // Hack to have a separate texture for the generated image since it's a different size.
+    // TODO: move into texture array once the texture array supports different size textures.
+    if (in.texture_index == 0) {
+        return textureSample(generated_texture, generated_sampler, in.tex_coords);
+    } else {
+        return textureSample(texture_array, texture_array_sampler, in.tex_coords, in.texture_index - 1);
+    }
 }
