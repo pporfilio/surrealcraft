@@ -96,13 +96,8 @@ impl State {
         // wasn't allowed.
         let diffuse_1_dynamic = image::DynamicImage::ImageRgba8(demo_state.img.clone());
 
-        let diffuse_2_rgba =
-            image::RgbaImage::from_pixel(imgx, imgy, image::Rgba([0, 255, 0, 255]));
-        let diffuse_2_dynamic = image::DynamicImage::ImageRgba8(diffuse_2_rgba.clone());
-
         let mut texture_vec = Vec::<image::DynamicImage>::new();
         texture_vec.push(diffuse_1_dynamic);
-        texture_vec.push(diffuse_2_dynamic);
         let texture_array = texture::TextureArray::new(
             &device,
             &queue,
@@ -124,20 +119,6 @@ impl State {
                 cgmath::Deg(0.0),
             ),
             texture_index: 0,
-        });
-
-        instances.push(Instance {
-            scale: cgmath::Vector2 { x: 1.0, y: 1.0 },
-            position: cgmath::Vector3 {
-                x: 4.0,
-                y: 0.0,
-                z: 0.0,
-            },
-            rotation: cgmath::Quaternion::from_axis_angle(
-                cgmath::Vector3::unit_z(),
-                cgmath::Deg(0.0),
-            ),
-            texture_index: 1,
         });
 
         let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
@@ -308,6 +289,7 @@ impl State {
         match (code, is_pressed) {
             (KeyCode::Escape, true) => event_loop.exit(),
             (KeyCode::Space, true) => self.step_algorithm(),
+            (KeyCode::KeyP, true) => self.add_square(),
             _ => {
                 self.camera.handle_key(code, is_pressed);
             }
@@ -323,7 +305,44 @@ impl State {
         );
     }
 
-    pub fn add_square(&mut self) {}
+    pub fn add_square(&mut self) {
+        // TODO: not hardcoded dimensions!
+        let diffuse_2_rgba = image::RgbaImage::from_pixel(800, 800, image::Rgba([0, 255, 0, 255]));
+        let diffuse_2_dynamic = image::DynamicImage::ImageRgba8(diffuse_2_rgba.clone());
+
+        self.texture_array
+            .add_image(&self.device, &self.queue, diffuse_2_dynamic);
+
+        self.instances.push(Instance {
+            scale: cgmath::Vector2 { x: 1.0, y: 1.0 },
+            position: cgmath::Vector3 {
+                x: 4.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            rotation: cgmath::Quaternion::from_axis_angle(
+                cgmath::Vector3::unit_z(),
+                cgmath::Deg(0.0),
+            ),
+            texture_index: 1,
+        });
+
+        let instance_data = self
+            .instances
+            .iter()
+            .map(Instance::to_raw)
+            .collect::<Vec<_>>();
+
+        // TODO: destroy self.instance_buffer
+
+        self.instance_buffer = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Instance Buffer"),
+                contents: bytemuck::cast_slice(&instance_data),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
+    }
 
     pub fn update(&mut self) {
         self.camera.update_camera();
