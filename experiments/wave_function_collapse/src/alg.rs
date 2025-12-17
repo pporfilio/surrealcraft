@@ -1,7 +1,8 @@
 use cgmath::Vector2;
 use image;
 use image::{ImageError, ImageReader, SubImage};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::thread::current;
 
 pub struct DemoState {
     pub img: image::RgbaImage,
@@ -90,15 +91,13 @@ pub struct WFCState {
     pub cell_width: u32,
     pub output_cells_x: u32,
     pub output_cells_y: u32,
+    pub sample_cell_id_to_info: HashMap<u32, SampleCellInfo>,
 }
-
-pub struct SampleCell {
+#[derive(Clone)]
+pub struct SampleCellInfo {
     pub id: u32,
     pub locations: Vec<cgmath::Vector2<u32>>,
-}
-
-pub struct HashTest {
-    pub count: u32,
+    pub adjacencies: HashSet<u32>,
 }
 
 impl WFCState {
@@ -127,6 +126,8 @@ impl WFCState {
             initial_color,
         );
 
+        let sample_cell_id_to_info = HashMap::new();
+
         Self {
             sample_image_rgba,
             generated_image_rgba,
@@ -134,54 +135,122 @@ impl WFCState {
             cell_width,
             output_cells_x,
             output_cells_y,
+            sample_cell_id_to_info,
         }
     }
 
-    pub fn initialize_adjacency(&self) {
-        let sample_cols = self.sample_image_rgba.width() / self.cell_width;
-        let sample_rows = self.sample_image_rgba.height() / self.cell_height;
+    pub fn sample_col_count(&self) -> u32 {
+        return self.sample_image_rgba.width() / self.cell_width;
+    }
 
-        let mut cell_map = HashMap::new();
+    pub fn sample_row_count(&self) -> u32 {
+        return self.sample_image_rgba.height() / self.cell_height;
+    }
 
-        let current_cell_id = 0;
+    pub fn sample_cell_as_array(&self, x: u32, y: u32) -> Vec<u8> {
+        // crop_immutable returns a SubImage that can be converted to an image with `to_image`
+        // Constructing with SubImage::new returned something that didn't match the trait bounds of to_image.
+        let cell_subimage = image::imageops::crop_imm(
+            &self.sample_image_rgba,
+            x * self.cell_width,
+            y * self.cell_height,
+            self.cell_width,
+            self.cell_height,
+        );
+        let cell_image: image::RgbaImage = cell_subimage.to_image();
+        return cell_image.into_raw();
+    }
+
+    pub fn initialize_adjacency(&mut self) {
+        let sample_cols = self.sample_col_count();
+        let sample_rows = self.sample_row_count();
+
+        let mut current_cell_id = 0;
+        let mut sample_cell_data_to_info = HashMap::new();
+        let mut sample_cell_location_to_id = HashMap::new();
 
         // Since cells can be duplicated, figuring out which cells
         // are the same ahead of time will make it faster to build
         // the adjacency list.
         for x_step in 0..sample_cols {
             for y_step in 0..sample_rows {
-                // crop_immutable returns a SubImage that can be converted to an image with `to_image`
-                // Constructing with SubImage::new returned something that didn't match the trait bounds of to_image.
-                let cell_subimage = image::imageops::crop_imm(
-                    &self.sample_image_rgba,
-                    x_step * self.cell_width,
-                    y_step * self.cell_height,
-                    self.cell_width,
-                    self.cell_height,
-                );
-                let cell_image: image::RgbaImage = cell_subimage.to_image();
-                let key: Vec<u8> = cell_image.into_raw();
-                let cell_entry = cell_map.entry(key).or_insert(SampleCell {
-                    id: current_cell_id,
-                    locations: Vec::new(),
+                let key = self.sample_cell_as_array(x_step, y_step);
+
+                // Create a new entry only if we don't already have a cell with the same pixel data
+                let cell_entry = sample_cell_data_to_info.entry(key).or_insert_with(|| {
+                    let new_cell = SampleCellInfo {
+                        id: current_cell_id,
+                        locations: Vec::new(),
+                        adjacencies: HashSet::new(),
+                    };
+                    // Update the cell id inside the closure so that it's only updated when we make a new entry
+                    current_cell_id += 1;
+                    return new_cell;
                 });
 
                 // If cell_entry was a primitive, for example if it was a u32 that we wanted to increment,
                 // This would be done as *cell_entry += 1. I guess it returns a reference to primitives but not
                 // to structs, or the `.` operator automatically knows if it needs to dereference something?
+                // Add the current location to this cell info, for both new and duplicate cell pixel data
                 cell_entry
                     .locations
                     .push(cgmath::Vector2::new(x_step, y_step));
 
+                sample_cell_location_to_id
+                    .insert(cgmath::Vector2::new(x_step, y_step), cell_entry.id);
+
+                // Doing this for every index
                 current_cell_id += 1;
             }
         }
 
-        // make a map between cell contents and id
+        // We're done with sample_cell_data_to_info here, so I'm okay cloning the CellInfo structs
+        // and only using/modifying the ones in sample_cell_id_to_info beyond this point.
+        for value in sample_cell_data_to_info.values() {
+            self.sample_cell_id_to_info.insert(value.id, value.clone());
+        }
 
-        // make a 2d array with each cell's content's id
+        let col_count = self.sample_col_count();
+        let row_count = self.sample_row_count();
 
-        // build adjacency list from this array
+        // For each CellInfo, for each location that cell appears, for each of the location's neighbors,
+        // record the neighbor's id in the adjacencies set.
+        for value in self.sample_cell_id_to_info.values_mut() {
+            for location in value.locations.clone() {
+                for adjacent_location in
+                    WFCState::adjacent_cell_coordinates(location, col_count, row_count)
+                {
+                    value
+                        .adjacencies
+                        .insert(*sample_cell_location_to_id.get(&adjacent_location).unwrap());
+                }
+            }
+        }
+    }
+
+    pub fn adjacent_cell_coordinates(
+        location: cgmath::Vector2<u32>,
+        col_count: u32,
+        row_count: u32,
+    ) -> Vec<cgmath::Vector2<u32>> {
+        let mut result = Vec::new();
+        let x = location.x;
+        let y = location.y;
+
+        if x > 0 {
+            result.push(cgmath::Vector2::new(x - 1, y));
+        }
+        if y > 0 {
+            result.push(cgmath::Vector2::new(x, y - 1));
+        }
+        if x < col_count {
+            result.push(cgmath::Vector2::new(x + 1, y));
+        }
+        if y < row_count {
+            result.push(cgmath::Vector2::new(x, y + 1));
+        }
+
+        return result;
     }
 
     pub fn next(&mut self) -> &image::RgbaImage {

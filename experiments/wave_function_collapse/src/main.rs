@@ -33,6 +33,7 @@ pub struct State {
     index_buffer: wgpu::Buffer,
     num_indices: u32,
     demo_state: alg::DemoState,
+    wfc_state: alg::WFCState,
     texture_array: texture::TextureArray,
     camera: camera::OrthoCamera2D,
     camera_uniform: camera::CameraUniform,
@@ -104,8 +105,12 @@ impl State {
         let diffuse_1_dynamic =
             image::DynamicImage::ImageRgba8(wfc_state.sample_image_rgba.clone());
 
+        let diffuse_2_dynamic =
+            image::DynamicImage::ImageRgba8(wfc_state.generated_image_rgba.clone());
+
         let mut texture_vec = Vec::<image::DynamicImage>::new();
         texture_vec.push(diffuse_1_dynamic);
+        texture_vec.push(diffuse_2_dynamic);
         let texture_array = texture::TextureArray::new(
             &device,
             &queue,
@@ -180,6 +185,7 @@ impl State {
             index_buffer,
             num_indices,
             demo_state,
+            wfc_state,
             texture_array,
             camera,
             camera_uniform,
@@ -346,6 +352,19 @@ impl State {
         // TODO: destroy self.instance_buffer
 
         self.instance_buffer = State::create_instance_buffer(&self.device, &self.instances);
+    }
+
+    pub fn add_adjacencies(&mut self) {
+        let cell_x_offset = 1.5;
+        let cell_scale = 0.2;
+        let adjacent_start_offset = 1.75;
+        let adjacent_scale = 0.1;
+        let adjacent_step = 0.15;
+        let sample_texture_index = 0;
+
+        // for (key, value) in self.wfc_state.sample_cell_adjacency.into_iter() {
+
+        // }
     }
 
     pub fn update(&mut self) {
