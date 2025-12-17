@@ -12,7 +12,9 @@ use winit::{
     window::Window,
 };
 
-use wave_function_collapse::{INDICES, VERTICES, Vertex};
+use cgmath::Rotation3;
+
+use wave_function_collapse::{INDICES, Instance, InstanceRaw, VERTICES, Vertex};
 
 mod alg;
 mod camera;
@@ -32,10 +34,13 @@ pub struct State {
     num_indices: u32,
     demo_state: alg::DemoState,
     diffuse_texture: texture::Texture,
+    diffuse_2_texture: texture::Texture,
     camera: camera::OrthoCamera2D,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
+    instances: Vec<Instance>,
+    instance_buffer: wgpu::Buffer,
 }
 
 // Rendering based on https://sotrh.github.io/learn-wgpu/beginner/
@@ -95,6 +100,48 @@ impl State {
         let diffuse_texture =
             texture::Texture::new(&device, &queue, diffuse_dynamic, Some("test_image"));
 
+        let diffuse_2_rgba =
+            image::RgbaImage::from_pixel(imgx, imgy, image::Rgba([0, 255, 0, 255]));
+        let diffuse_2_dynamic = image::DynamicImage::ImageRgba8(diffuse_2_rgba.clone());
+        let diffuse_2_texture =
+            texture::Texture::new(&device, &queue, diffuse_2_dynamic, Some("test_2_image"));
+
+        // Make sure that if you add new instances to the Vec, you recreate the
+        // instance_buffer as well as camera_bind_group. Otherwise, your new instances        // won't show up correctly.
+        let mut instances = Vec::<Instance>::new();
+        instances.push(Instance {
+            scale: cgmath::Vector2 { x: 1.0, y: 1.0 },
+            position: cgmath::Vector3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            rotation: cgmath::Quaternion::from_axis_angle(
+                cgmath::Vector3::unit_z(),
+                cgmath::Deg(0.0),
+            ),
+        });
+
+        instances.push(Instance {
+            scale: cgmath::Vector2 { x: 1.0, y: 1.0 },
+            position: cgmath::Vector3 {
+                x: 4.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            rotation: cgmath::Quaternion::from_axis_angle(
+                cgmath::Vector3::unit_z(),
+                cgmath::Deg(0.0),
+            ),
+        });
+
+        let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
+        let instance_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Instance Buffer"),
+            contents: bytemuck::cast_slice(&instance_data),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(VERTICES), // casts to &[u8]
@@ -144,10 +191,13 @@ impl State {
             num_indices,
             demo_state,
             diffuse_texture,
+            diffuse_2_texture,
             camera,
             camera_uniform,
             camera_buffer,
             camera_bind_group,
+            instances,
+            instance_buffer,
         })
     }
 
@@ -203,7 +253,7 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: Some("vs_main"), // A function marked with @vertex
-                buffers: &[Vertex::desc()],
+                buffers: &[Vertex::desc(), InstanceRaw::desc()],
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
             },
             fragment: Some(wgpu::FragmentState {
@@ -343,8 +393,9 @@ impl State {
             render_pass.set_bind_group(0, &self.diffuse_texture.bind_group, &[]);
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+            render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-            render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
+            render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);
         }
 
         // submit will accept anything that implements IntoIter
