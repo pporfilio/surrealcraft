@@ -120,6 +120,7 @@ impl State {
                 cgmath::Vector3::unit_z(),
                 cgmath::Deg(0.0),
             ),
+            texture_index: 0,
         });
 
         instances.push(Instance {
@@ -133,6 +134,7 @@ impl State {
                 cgmath::Vector3::unit_z(),
                 cgmath::Deg(0.0),
             ),
+            texture_index: 1,
         });
 
         let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
@@ -174,6 +176,7 @@ impl State {
             &device,
             &diffuse_texture.bind_group_layout,
             &camera_bind_group_layout,
+            &diffuse_2_texture.bind_group_layout,
             &shader,
             &surface_config,
         );
@@ -237,13 +240,18 @@ impl State {
         // TODO: Probably want to pass this in as an array
         texture_bind_group_layout: &wgpu::BindGroupLayout,
         camera_bind_group_layout: &wgpu::BindGroupLayout,
+        texture_bind_group_layout_2: &wgpu::BindGroupLayout,
         shader: &wgpu::ShaderModule,
         surface_config: &wgpu::SurfaceConfiguration,
     ) -> wgpu::RenderPipeline {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout, &camera_bind_group_layout],
+                bind_group_layouts: &[
+                    &texture_bind_group_layout,
+                    &camera_bind_group_layout,
+                    texture_bind_group_layout_2,
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -392,6 +400,7 @@ impl State {
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.diffuse_texture.bind_group, &[]);
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+            render_pass.set_bind_group(2, &self.diffuse_2_texture.bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
