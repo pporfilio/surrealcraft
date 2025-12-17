@@ -62,18 +62,11 @@ var t_diffuse: texture_2d<f32>;
 var s_diffuse: sampler;
 
 @group(2) @binding(0)
-var t_diffuse_2: texture_2d<f32>;
+var texture_array: texture_2d_array<f32>;
 @group(2) @binding(1)
-var s_diffuse_2: sampler;
-
+var texture_array_sampler: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    if (in.texture_index == 0) {
-        return textureSample(t_diffuse, s_diffuse, in.tex_coords);
-    } else if (in.texture_index == 1) {
-        return textureSample(t_diffuse_2, s_diffuse_2, in.tex_coords);
-    } else {
-        return vec4(0.0, 0.0, 1.0, 1.0);
-    }
+    return textureSample(texture_array, texture_array_sampler, in.tex_coords, in.texture_index);
 }

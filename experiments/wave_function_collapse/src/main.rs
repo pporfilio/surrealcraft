@@ -34,7 +34,7 @@ pub struct State {
     num_indices: u32,
     demo_state: alg::DemoState,
     diffuse_texture: texture::Texture,
-    diffuse_2_texture: texture::Texture,
+    texture_array: texture::TextureArray,
     camera: camera::OrthoCamera2D,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
@@ -103,8 +103,13 @@ impl State {
         let diffuse_2_rgba =
             image::RgbaImage::from_pixel(imgx, imgy, image::Rgba([0, 255, 0, 255]));
         let diffuse_2_dynamic = image::DynamicImage::ImageRgba8(diffuse_2_rgba.clone());
-        let diffuse_2_texture =
-            texture::Texture::new(&device, &queue, diffuse_2_dynamic, Some("test_2_image"));
+
+        let mut texture_vec = Vec::<image::DynamicImage>::new();
+        let diffuse_1_dynamic_for_array = image::DynamicImage::ImageRgba8(demo_state.img.clone());
+        texture_vec.push(diffuse_1_dynamic_for_array);
+        texture_vec.push(diffuse_2_dynamic);
+        let texture_array =
+            texture::TextureArray::new(&device, &queue, texture_vec, Some("texture_array"));
 
         // Make sure that if you add new instances to the Vec, you recreate the
         // instance_buffer as well as camera_bind_group. Otherwise, your new instances        // won't show up correctly.
@@ -176,7 +181,7 @@ impl State {
             &device,
             &diffuse_texture.bind_group_layout,
             &camera_bind_group_layout,
-            &diffuse_2_texture.bind_group_layout,
+            &texture_array.bind_group_layout,
             &shader,
             &surface_config,
         );
@@ -194,7 +199,7 @@ impl State {
             num_indices,
             demo_state,
             diffuse_texture,
-            diffuse_2_texture,
+            texture_array,
             camera,
             camera_uniform,
             camera_buffer,
@@ -240,7 +245,7 @@ impl State {
         // TODO: Probably want to pass this in as an array
         texture_bind_group_layout: &wgpu::BindGroupLayout,
         camera_bind_group_layout: &wgpu::BindGroupLayout,
-        texture_bind_group_layout_2: &wgpu::BindGroupLayout,
+        texture_array_bind_group_layout: &wgpu::BindGroupLayout,
         shader: &wgpu::ShaderModule,
         surface_config: &wgpu::SurfaceConfiguration,
     ) -> wgpu::RenderPipeline {
@@ -250,7 +255,7 @@ impl State {
                 bind_group_layouts: &[
                     &texture_bind_group_layout,
                     &camera_bind_group_layout,
-                    texture_bind_group_layout_2,
+                    &texture_array_bind_group_layout,
                 ],
                 push_constant_ranges: &[],
             });
@@ -400,7 +405,7 @@ impl State {
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.diffuse_texture.bind_group, &[]);
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-            render_pass.set_bind_group(2, &self.diffuse_2_texture.bind_group, &[]);
+            render_pass.set_bind_group(2, &self.texture_array.bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
