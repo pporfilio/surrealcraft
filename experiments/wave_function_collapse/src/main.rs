@@ -33,11 +33,10 @@ pub struct State {
     demo_state: alg::DemoState,
     diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: texture::Texture,
-    camera: camera::Camera,
+    camera: camera::OrthoCamera2D,
     camera_uniform: camera::CameraUniform,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
-    camera_controller: camera::CameraController,
 }
 
 // Rendering based on https://sotrh.github.io/learn-wgpu/beginner/
@@ -116,24 +115,10 @@ impl State {
         });
         let num_indices = INDICES.len() as u32;
 
-        let camera = camera::Camera {
-            // position the camera 1 unit up and 2 units back
-            // +z is out of the screen
-            eye: (0.0, 1.0, 2.0).into(),
-            // have it look at the origin
-            target: (0.0, 0.0, 0.0).into(),
-            // which way is "up"
-            up: cgmath::Vector3::unit_y(),
-            aspect: surface_config.width as f32 / surface_config.height as f32,
-            fovy: 45.0,
-            znear: 0.1,
-            zfar: 100.0,
-        };
-
-        let camera_controller = camera::CameraController::new(0.2);
+        let camera = camera::OrthoCamera2D::new(-10.0, 10.0, 10.0, -10.0, 1.0);
 
         let mut camera_uniform = camera::CameraUniform::new();
-        camera_uniform.update_view_proj(&camera);
+        camera_uniform.set_view_proj(camera.build_view_projection_matrix());
 
         let camera_buffer = camera_uniform.get_camera_buffer(&device);
 
@@ -171,7 +156,6 @@ impl State {
             camera_uniform,
             camera_buffer,
             camera_bind_group,
-            camera_controller,
         })
     }
 
@@ -325,7 +309,7 @@ impl State {
             (KeyCode::Escape, true) => event_loop.exit(),
             (KeyCode::Space, true) => self.step_algorithm(),
             _ => {
-                self.camera_controller.handle_key(code, is_pressed);
+                self.camera.handle_key(code, is_pressed);
             }
         }
     }
@@ -357,8 +341,9 @@ impl State {
     }
 
     pub fn update(&mut self) {
-        self.camera_controller.update_camera(&mut self.camera);
-        self.camera_uniform.update_view_proj(&self.camera);
+        self.camera.update_camera();
+        self.camera_uniform
+            .set_view_proj(self.camera.build_view_projection_matrix());
         self.queue.write_buffer(
             &self.camera_buffer,
             0,
