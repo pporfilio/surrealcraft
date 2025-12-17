@@ -135,7 +135,11 @@ impl State {
 
         let camera_bind_group_layout = camera_uniform.get_camera_bind_group_layout(&device);
 
-        let camera_bind_group = camera_uniform.get_camera_bind_group(&device, &camera_buffer, &camera_bind_group_layout);
+        let camera_bind_group = camera_uniform.get_camera_bind_group(
+            &device,
+            &camera_buffer,
+            &camera_bind_group_layout,
+        );
 
         let render_pipeline = Self::get_render_pipeline(
             &device,
@@ -394,6 +398,7 @@ impl State {
 
             render_pass.set_pipeline(&self.render_pipeline);
             render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
+            render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
             render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
