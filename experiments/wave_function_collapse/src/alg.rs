@@ -95,13 +95,12 @@ pub struct SourceCell {
 
 impl WFCState {
     pub fn new(
-        sample_image_path: &str,
+        sample_image: image::DynamicImage,
         cell_width: u32,
         cell_height: u32,
         output_cells_x: u32,
         output_cells_y: u32,
-    ) -> Result<Self, ImageError> {
-        let sample_image = ImageReader::open(sample_image_path)?.decode()?;
+    ) -> Self {
         let sample_image_rgba = sample_image.to_rgba8();
 
         let initial_color = image::Rgba([255, 255, 255, 255]);
@@ -111,10 +110,10 @@ impl WFCState {
             initial_color,
         );
 
-        Ok(Self {
+        Self {
             sample_image_rgba,
             generated_image_rgba,
-        })
+        }
     }
 
     pub fn next(&mut self) -> &image::RgbaImage {

@@ -90,11 +90,17 @@ impl State {
         let diffuse_rgba = image::RgbaImage::from_pixel(imgx, imgy, initial_color);
         let demo_state = alg::DemoState::new(diffuse_rgba, 100);
 
+        let bytes = include_bytes!("../images/color_gradient.png");
+        let diffuse_image = image::load_from_memory(bytes).unwrap();
+
+        let mut wfc_state = alg::WFCState::new(diffuse_image, 5, 5, 10, 10);
+
         // The compilier suggested this clone (acknowledging the performance impact).
         // The issue seemed to be that ImageRgba8 moves the value but then we tried
         // to use diffuse_rgba later to return it as part of the State struct which
         // wasn't allowed.
-        let diffuse_1_dynamic = image::DynamicImage::ImageRgba8(demo_state.img.clone());
+        let diffuse_1_dynamic =
+            image::DynamicImage::ImageRgba8(wfc_state.sample_image_rgba.clone());
 
         let mut texture_vec = Vec::<image::DynamicImage>::new();
         texture_vec.push(diffuse_1_dynamic);
@@ -271,7 +277,10 @@ impl State {
         });
     }
 
-    pub fn create_instance_buffer(device: &wgpu::Device, instances: &Vec<Instance>) -> wgpu::Buffer {
+    pub fn create_instance_buffer(
+        device: &wgpu::Device,
+        instances: &Vec<Instance>,
+    ) -> wgpu::Buffer {
         let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
         return device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Instance Buffer"),
@@ -435,7 +444,6 @@ impl ApplicationHandler<State> for App {
         let mut window_attributes = Window::default_attributes();
         window_attributes.visible = true;
         window_attributes.active = true;
-
 
         let window = Arc::new(event_loop.create_window(window_attributes).unwrap());
 
