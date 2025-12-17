@@ -187,6 +187,7 @@ pub struct OrthoCamera2D {
     pub top: f32,
     pub bottom: f32,
     pub pixels_per_unit: u32,
+    pub zoom: f32,
     pub znear: f32,
     pub zfar: f32,
     pub speed: f32,
@@ -216,6 +217,7 @@ impl OrthoCamera2D {
             top: 0.0,
             bottom: 0.0,
             pixels_per_unit,
+            zoom: 1.0,
             znear: 0.1,
             zfar: 100.0,
             speed,
@@ -235,10 +237,10 @@ impl OrthoCamera2D {
     pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
         let view = cgmath::Matrix4::look_at_rh(self.eye, self.target, self.up);
         let proj = cgmath::ortho(
-            self.left,
-            self.right,
-            self.bottom,
-            self.top,
+            self.left * self.zoom,
+            self.right * self.zoom,
+            self.bottom * self.zoom,
+            self.top * self.zoom,
             self.znear,
             self.zfar,
         );
@@ -277,8 +279,8 @@ impl OrthoCamera2D {
     }
 
     pub fn update_camera(&mut self) {
-        let vertical_speed = (self.top - self.bottom) * 0.05;
-        let horizontal_speed = (self.right - self.left) * 0.05;
+        let vertical_speed = (self.top - self.bottom) * self.speed / 2.0;
+        let horizontal_speed = (self.right - self.left) * self.speed / 2.0;
         if self.is_up_pressed {
             self.eye += cgmath::Vector3::new(0.0, vertical_speed, 0.0);
             self.target += cgmath::Vector3::new(0.0, vertical_speed, 0.0);
@@ -296,24 +298,15 @@ impl OrthoCamera2D {
             self.target -= cgmath::Vector3::new(horizontal_speed, 0.0, 0.0);
         }
         if self.is_zoom_in_pressed {
-            let zoom_in_speed = 0.975;
-            self.left *= zoom_in_speed;
-            self.right *= zoom_in_speed;
-            self.top *= zoom_in_speed;
-            self.bottom *= zoom_in_speed;
+            self.zoom *= 1.0 - (self.speed);
         }
         if self.is_zoom_out_pressed {
-            let zoom_out_speed = 1.025;
-            self.left *= zoom_out_speed;
-            self.right *= zoom_out_speed;
-            self.top *= zoom_out_speed;
-            self.bottom *= zoom_out_speed;
+            self.zoom *= 1.0 + (self.speed);
         }
     }
 
     pub fn resize(&mut self, new_width: u32, new_height: u32) {
         // Adjust camera with new window size to keep objects looking the same size
-        // 100 pixels per unit at default zoom?
         self.window_width = new_width;
         self.window_height = new_height;
         let half_width_units = self.window_width as f32 / 2.0 / self.pixels_per_unit as f32;
