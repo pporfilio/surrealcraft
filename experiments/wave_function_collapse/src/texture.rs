@@ -1,41 +1,36 @@
-use anyhow::*;
-use image::GenericImageView;
+// TODO: make labels dynamic
+// TODO: does bind group layout and bind group need `binding` unique for the whole program?
+//
 
 pub struct Texture {
-    #[allow(unused)]
+    // TODO: unsure if necessary/a good idea to store image
+    pub img: image::DynamicImage,
     pub texture: wgpu::Texture,
     pub view: wgpu::TextureView,
     pub sampler: wgpu::Sampler,
+    pub bind_group_layout: wgpu::BindGroupLayout,
+    pub bind_group: wgpu::BindGroup,
 }
 
 impl Texture {
-    // from_bytes is from the tutorial. Would be used if we were
-    // creating the texture from data from a file on disk.
-    #[allow(unused)]
-    pub fn from_bytes(
+    pub fn new(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        bytes: &[u8],
-        label: &str,
-    ) -> Result<Self> {
-        let img = image::load_from_memory(bytes)?;
-        Self::from_image(device, queue, &img, Some(label))
-    }
-
-    pub fn from_image(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        img: &image::DynamicImage,
+        img: image::DynamicImage,
         label: Option<&str>,
-    ) -> Result<Self> {
+    ) -> Self {
         let rgba = img.to_rgba8();
-        let dimensions = img.dimensions();
+        let dimensions = rgba.dimensions();
 
         let size = wgpu::Extent3d {
             width: dimensions.0,
             height: dimensions.1,
             depth_or_array_layers: 1,
         };
+
+        //
+        // Create texture
+        //
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label,
             size,
@@ -56,6 +51,9 @@ impl Texture {
             view_formats: &[],
         });
 
+        //
+        // Copy texture to GPU
+        //
         queue.write_texture(
             wgpu::TexelCopyTextureInfo {
                 aspect: wgpu::TextureAspect::All,
@@ -63,6 +61,7 @@ impl Texture {
                 mip_level: 0,
                 origin: wgpu::Origin3d::ZERO,
             },
+            // The image data
             &rgba,
             wgpu::TexelCopyBufferLayout {
                 offset: 0,
@@ -72,8 +71,9 @@ impl Texture {
             size,
         );
 
-        // We don't need to configure the texture view much, so let's
-        // let wgpu define it.
+        //
+        // Create view and sampler for the copied image
+        //
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
@@ -85,10 +85,58 @@ impl Texture {
             ..Default::default()
         });
 
-        Ok(Self {
+        //
+        // Create a bind group layout
+        //
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        multisampled: false,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    // This should match the filterable field of the
+                    // corresponding Texture entry above.
+                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                    count: None,
+                },
+            ],
+            label: Some("texture_bind_group_layout"),
+        });
+
+        //
+        // Create a bind group
+        //
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
+            label: Some("diffuse_bind_group"),
+        });
+
+        Self {
+            img,
             texture,
             view,
             sampler,
-        })
+            bind_group_layout,
+            bind_group,
+        }
     }
 }

@@ -31,7 +31,6 @@ pub struct State {
     index_buffer: wgpu::Buffer,
     num_indices: u32,
     demo_state: alg::DemoState,
-    diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: texture::Texture,
     camera: camera::OrthoCamera2D,
     camera_uniform: camera::CameraUniform,
@@ -94,13 +93,7 @@ impl State {
         let diffuse_dynamic = image::DynamicImage::ImageRgba8(demo_state.img.clone());
 
         let diffuse_texture =
-            texture::Texture::from_image(&device, &queue, &diffuse_dynamic, Some("test_image"))
-                .unwrap();
-
-        let texture_bind_group_layout = Self::get_texture_bind_group_layout(&device);
-
-        let diffuse_bind_group =
-            Self::get_texture_bind_group(&device, &diffuse_texture, &texture_bind_group_layout);
+            texture::Texture::new(&device, &queue, diffuse_dynamic, Some("test_image"));
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
@@ -132,7 +125,7 @@ impl State {
 
         let render_pipeline = Self::get_render_pipeline(
             &device,
-            &texture_bind_group_layout,
+            &diffuse_texture.bind_group_layout,
             &camera_bind_group_layout,
             &shader,
             &surface_config,
@@ -150,7 +143,6 @@ impl State {
             index_buffer,
             num_indices,
             demo_state,
-            diffuse_bind_group,
             diffuse_texture,
             camera,
             camera_uniform,
@@ -188,53 +180,6 @@ impl State {
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
         }
-    }
-
-    pub fn get_texture_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-        return device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            entries: &[
-                wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Texture {
-                        multisampled: false,
-                        view_dimension: wgpu::TextureViewDimension::D2,
-                        sample_type: wgpu::TextureSampleType::Float { filterable: true },
-                    },
-                    count: None,
-                },
-                wgpu::BindGroupLayoutEntry {
-                    binding: 1,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    // This should match the filterable field of the
-                    // corresponding Texture entry above.
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-            label: Some("texture_bind_group_layout"),
-        });
-    }
-
-    pub fn get_texture_bind_group(
-        device: &wgpu::Device,
-        diffuse_texture: &texture::Texture,
-        texture_bind_group_layout: &wgpu::BindGroupLayout,
-    ) -> wgpu::BindGroup {
-        return device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &texture_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                },
-            ],
-            label: Some("diffuse_bind_group"),
-        });
     }
 
     pub fn get_render_pipeline(
@@ -397,7 +342,7 @@ impl State {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
+            render_pass.set_bind_group(0, &self.diffuse_texture.bind_group, &[]);
             render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
             render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
             render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
