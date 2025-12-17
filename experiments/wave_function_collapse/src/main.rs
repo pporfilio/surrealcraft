@@ -103,8 +103,11 @@ impl State {
         let mut texture_vec = Vec::<image::DynamicImage>::new();
         texture_vec.push(diffuse_1_dynamic);
         texture_vec.push(diffuse_2_dynamic);
-        let texture_array =
-            texture::TextureArray::new(&device, &queue, texture_vec, Some("texture_array"));
+        let texture_array = texture::TextureArray::new(
+            &device,
+            &queue,
+            texture_vec, /*, Some("texture_array")*/
+        );
 
         // Make sure that if you add new instances to the Vec, you recreate the
         // instance_buffer as well as camera_bind_group. Otherwise, your new instances        // won't show up correctly.
@@ -319,6 +322,8 @@ impl State {
             0,
         );
     }
+
+    pub fn add_square(&mut self) {}
 
     pub fn update(&mut self) {
         self.camera.update_camera();
