@@ -49,11 +49,50 @@ impl CameraUniform {
         }
     }
 
+    // I guess we don't store the buffer and bind group in the CameraUniform struct
+    // so that CameraUniform can be bytemuck::Pod etc. and used directly as data for
+    // the buffer contents.
+    // Could of course add another layer here but I'm sticking closer to the tutorial for now.
     pub fn get_camera_buffer(self: &Self, device: &wgpu::Device) -> wgpu::Buffer {
         return device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Camera Buffer"),
             contents: bytemuck::cast_slice(&[*self]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+    }
+
+    pub fn get_camera_bind_group_layout(
+        self: &Self,
+        device: &wgpu::Device,
+    ) -> wgpu::BindGroupLayout {
+        return device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            }],
+            label: Some("camera_bind_group_layout"),
+        });
+    }
+
+    pub fn get_camera_bind_group(
+        self: &Self,
+        device: &wgpu::Device,
+        camera_buffer: &wgpu::Buffer,
+        camera_bind_group_layout: &wgpu::BindGroupLayout,
+    ) -> wgpu::BindGroup {
+        return device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.as_entire_binding(),
+            }],
+            label: Some("camera_bind_group"),
         });
     }
 

@@ -34,6 +34,8 @@ pub struct State {
     diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: texture::Texture,
     camera: camera::Camera,
+    camera_buffer: wgpu::Buffer,
+    camera_bind_group: wgpu::BindGroup,
 }
 
 // Rendering based on https://sotrh.github.io/learn-wgpu/beginner/
@@ -99,13 +101,6 @@ impl State {
         let diffuse_bind_group =
             Self::get_texture_bind_group(&device, &diffuse_texture, &texture_bind_group_layout);
 
-        let render_pipeline = Self::get_render_pipeline(
-            &device,
-            &texture_bind_group_layout,
-            &shader,
-            &surface_config,
-        );
-
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Vertex Buffer"),
             contents: bytemuck::cast_slice(VERTICES), // casts to &[u8]
@@ -138,6 +133,18 @@ impl State {
 
         let camera_buffer = camera_uniform.get_camera_buffer(&device);
 
+        let camera_bind_group_layout = camera_uniform.get_camera_bind_group_layout(&device);
+
+        let camera_bind_group = camera_uniform.get_camera_bind_group(&device, &camera_buffer, &camera_bind_group_layout);
+
+        let render_pipeline = Self::get_render_pipeline(
+            &device,
+            &texture_bind_group_layout,
+            &camera_bind_group_layout,
+            &shader,
+            &surface_config,
+        );
+
         Ok(Self {
             surface,
             device,
@@ -153,6 +160,8 @@ impl State {
             diffuse_bind_group,
             diffuse_texture,
             camera,
+            camera_buffer,
+            camera_bind_group,
         })
     }
 
@@ -236,14 +245,16 @@ impl State {
 
     pub fn get_render_pipeline(
         device: &wgpu::Device,
+        // TODO: Probably want to pass this in as an array
         texture_bind_group_layout: &wgpu::BindGroupLayout,
+        camera_bind_group_layout: &wgpu::BindGroupLayout,
         shader: &wgpu::ShaderModule,
         surface_config: &wgpu::SurfaceConfiguration,
     ) -> wgpu::RenderPipeline {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&texture_bind_group_layout],
+                bind_group_layouts: &[&texture_bind_group_layout, &camera_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
