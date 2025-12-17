@@ -265,6 +265,25 @@ impl WFCState {
         return result;
     }
 
+    pub fn sample_texture_offset(
+        &self,
+        cell_location: cgmath::Vector2<u32>,
+    ) -> cgmath::Vector2<f32> {
+        return cgmath::Vector2::new(
+            cell_location.x as f32
+                * (self.cell_width as f32 / self.sample_image_rgba.width() as f32),
+            cell_location.y as f32
+                * (self.cell_height as f32 / self.sample_image_rgba.height() as f32),
+        );
+    }
+
+    pub fn sample_texture_scale(&self) -> cgmath::Vector2<f32> {
+        return cgmath::Vector2::new(
+            1.0 / self.sample_col_count() as f32,
+            1.0 / self.sample_row_count() as f32,
+        );
+    }
+
     pub fn next(&mut self) -> &image::RgbaImage {
         return &self.generated_image_rgba;
     }

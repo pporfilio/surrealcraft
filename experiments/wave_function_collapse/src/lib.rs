@@ -71,9 +71,9 @@ impl Instance {
     pub fn to_raw(&self) -> InstanceRaw {
         println!("setting texture_index = {}", self.texture_index);
         InstanceRaw {
-            model: (cgmath::Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, 1.0)
+            model: (cgmath::Matrix4::from(self.rotation)
                 * cgmath::Matrix4::from_translation(self.position)
-                * cgmath::Matrix4::from(self.rotation))
+                * cgmath::Matrix4::from_nonuniform_scale(self.scale.x, self.scale.y, 1.0))
             .into(),
             uv_offset: self.uv_offset.into(),
             uv_scale: self.uv_scale.into(),
@@ -127,7 +127,7 @@ impl InstanceRaw {
                     format: wgpu::VertexFormat::Float32x2,
                 },
                 wgpu::VertexAttribute {
-                    offset: mem::size_of::<[f32; 16]>() as wgpu::BufferAddress,
+                    offset: mem::size_of::<[f32; 20]>() as wgpu::BufferAddress,
                     shader_location: 11,
                     format: wgpu::VertexFormat::Uint32,
                 },

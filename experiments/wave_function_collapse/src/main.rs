@@ -133,7 +133,7 @@ impl State {
                 cgmath::Deg(0.0),
             ),
             uv_offset: cgmath::Vector2::new(0.0, 0.0),
-            uv_scale: cgmath::Vector2::new(0.0, 0.0),
+            uv_scale: cgmath::Vector2::new(1.0, 1.0),
             texture_index: 0,
         });
 
@@ -313,7 +313,7 @@ impl State {
         match (code, is_pressed) {
             (KeyCode::Escape, true) => event_loop.exit(),
             (KeyCode::Space, true) => self.step_algorithm(),
-            (KeyCode::KeyP, true) => self.add_square(),
+            (KeyCode::KeyP, true) => self.add_adjacencies(),
             _ => {
                 self.camera.handle_key(code, is_pressed);
             }
@@ -349,26 +349,45 @@ impl State {
                 cgmath::Deg(0.0),
             ),
             uv_offset: cgmath::Vector2::new(0.0, 0.0),
-            uv_scale: cgmath::Vector2::new(0.0, 0.0),
+            uv_scale: cgmath::Vector2::new(1.0, 1.0),
             texture_index: 1,
         });
 
-        // TODO: destroy self.instance_buffer
-
+        // TODO: destroy self.instance_buffer?
         self.instance_buffer = State::create_instance_buffer(&self.device, &self.instances);
     }
 
     pub fn add_adjacencies(&mut self) {
         let cell_x_offset = 1.5;
-        let cell_scale = 0.2;
+        let mut cell_y_offset = 0.0;
+        let cell_scale = 0.3;
+
         let adjacent_start_offset = 1.75;
         let adjacent_scale = 0.1;
         let adjacent_step = 0.15;
         let sample_texture_index = 0;
 
+        let default_rotation =
+            cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(), cgmath::Deg(0.0));
+
         for value in self.wfc_state.sample_cell_id_to_info.values() {
-            // instances.push
+            let texture_offset = self.wfc_state.sample_texture_offset(value.locations[0]);
+            let texture_scale = self.wfc_state.sample_texture_scale();
+            println!("texture offset: {}, {}", texture_offset.x, texture_offset.y);
+            println!("texture scale: {}, {}", texture_scale.x, texture_scale.y);
+            self.instances.push(Instance {
+                scale: cgmath::Vector2::new(cell_scale, cell_scale),
+                position: cgmath::Vector3::new(cell_x_offset, cell_y_offset, 0.0),
+                rotation: default_rotation,
+                uv_offset: texture_offset,
+                uv_scale: texture_scale,
+                texture_index: sample_texture_index,
+            });
+            cell_y_offset -= 0.5;
         }
+
+        // TODO: destroy self.instance_buffer?
+        self.instance_buffer = State::create_instance_buffer(&self.device, &self.instances);
     }
 
     pub fn update(&mut self) {

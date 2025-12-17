@@ -50,7 +50,7 @@ fn vs_main(
     );
 
     var out: VertexOutput;
-    out.tex_coords = model.tex_coords;
+    out.tex_coords = instance.uv_offset + instance.uv_scale * model.tex_coords;
     out.clip_position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
     out.texture_index = instance.texture_index;
     return out;
@@ -65,9 +65,5 @@ var texture_array_sampler: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    if (in.texture_index == 0) {
-        return textureSample(texture_array, texture_array_sampler, in.tex_coords, in.texture_index);
-    } else {
-        return textureSample(texture_array, texture_array_sampler, in.tex_coords, in.texture_index);
-    }
+    return textureSample(texture_array, texture_array_sampler, in.tex_coords, in.texture_index);
 }
