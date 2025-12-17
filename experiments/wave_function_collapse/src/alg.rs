@@ -23,7 +23,7 @@ pub fn step_demo_image(state: &mut DemoState) {
     let img_y = state.img.height();
     let x_steps = img_x / state.step;
     let y_steps = img_y / state.step;
-    println!("x_steps {} y_steps {}", x_steps, y_steps);
+    println!("current_x {} current_y {}", current_x, current_y);
 
     // TODO: This feels awkward and similar to a Python generator
     // Is there a way to do something similar in Rust?
@@ -32,8 +32,8 @@ pub fn step_demo_image(state: &mut DemoState) {
         return;
     } else {
         let subimage = image::RgbaImage::from_pixel(
-            img_x,
-            img_y,
+            state.step,
+            state.step,
             image::Rgba([
                 255 / (state.current_x + 1) as u8,
                 255 / (state.current_y + 1) as u8,
@@ -56,6 +56,7 @@ pub fn step_demo_image(state: &mut DemoState) {
     }
 }
 
+#[allow(unused)]
 pub fn fill_demo_image(img: &mut image::RgbaImage) {
     let imgx = img.width();
     let imgy = img.height();
@@ -66,8 +67,8 @@ pub fn fill_demo_image(img: &mut image::RgbaImage) {
     for x in 0..x_steps {
         for y in 0..y_steps {
             let subimage = image::RgbaImage::from_pixel(
-                imgx,
-                imgy,
+                step,
+                step,
                 image::Rgba([255 / (x + 1) as u8, 255 / (y + 1) as u8, 0, 255]),
             );
             image::imageops::replace(img, &subimage, (x * step) as i64, (y * step) as i64);

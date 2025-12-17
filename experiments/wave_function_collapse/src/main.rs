@@ -94,18 +94,8 @@ impl State {
         let imgx = 800;
         let imgy = 800;
         let initial_color = image::Rgba([255, 255, 255, 255]);
-        let mut diffuse_rgba = image::RgbaImage::from_pixel(imgx, imgy, initial_color);
+        let diffuse_rgba = image::RgbaImage::from_pixel(imgx, imgy, initial_color);
         let demo_state = alg::DemoState::new(diffuse_rgba, 100);
-
-        // alg::fill_demo_image(&mut diffuse_rgba);
-
-        let texture_size = wgpu::Extent3d {
-            width: imgx,
-            height: imgy,
-            // All textures are stored as 3D, we represent our 2D texture
-            // by setting depth to 1.
-            depth_or_array_layers: 1,
-        };
 
         // The compilier suggested this clone (acknowledging the performance impact).
         // The issue seemed to be that ImageRgba8 moves the value but then we tried
@@ -245,11 +235,38 @@ impl State {
         }
     }
 
-    fn handle_key(&self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
+    fn handle_key(&mut self, event_loop: &ActiveEventLoop, code: KeyCode, is_pressed: bool) {
         match (code, is_pressed) {
             (KeyCode::Escape, true) => event_loop.exit(),
+            (KeyCode::Space, true) => self.step_algorithm(),
             _ => {}
         }
+    }
+
+    fn step_algorithm(&mut self) {
+        alg::step_demo_image(&mut self.demo_state);
+        let dimensions = self.demo_state.img.dimensions();
+        let size = wgpu::Extent3d {
+            width: dimensions.0,
+            height: dimensions.1,
+            depth_or_array_layers: 1,
+        };
+
+        self.queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                aspect: wgpu::TextureAspect::All,
+                texture: &self.diffuse_texture.texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+            },
+            &image::DynamicImage::ImageRgba8(self.demo_state.img.clone()).to_rgba8(),
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * dimensions.0),
+                rows_per_image: Some(dimensions.1),
+            },
+            size,
+        )
     }
 
     pub fn update(&mut self) {
@@ -316,6 +333,7 @@ impl State {
 }
 
 pub struct App {
+    #[allow(unused)]
     proxy: Option<winit::event_loop::EventLoopProxy<State>>,
     state: Option<State>,
 }
@@ -341,7 +359,7 @@ impl ApplicationHandler<State> for App {
         self.state = Some(pollster::block_on(State::new(window)).unwrap());
     }
 
-    fn user_event(&mut self, _event_loop: &ActiveEventLoop, mut event: State) {
+    fn user_event(&mut self, _event_loop: &ActiveEventLoop, event: State) {
         self.state = Some(event);
     }
 
@@ -421,5 +439,5 @@ fn main() {
 
     imgbuf.save("result.png").unwrap();
 
-    run();
+    let _ = run();
 }

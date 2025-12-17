@@ -9,6 +9,9 @@ pub struct Texture {
 }
 
 impl Texture {
+    // from_bytes is from the tutorial. Would be used if we were
+    // creating the texture from data from a file on disk.
+    #[allow(unused)]
     pub fn from_bytes(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
