@@ -15,6 +15,7 @@ use winit::{
 use wave_function_collapse::{INDICES, VERTICES, Vertex};
 
 mod alg;
+mod camera;
 mod texture;
 
 // This will store the state of our game
@@ -32,6 +33,7 @@ pub struct State {
     demo_state: alg::DemoState,
     diffuse_bind_group: wgpu::BindGroup,
     diffuse_texture: texture::Texture,
+    camera: camera::Camera,
 }
 
 // Rendering based on https://sotrh.github.io/learn-wgpu/beginner/
@@ -92,8 +94,7 @@ impl State {
             texture::Texture::from_image(&device, &queue, &diffuse_dynamic, Some("test_image"))
                 .unwrap();
 
-        let texture_bind_group_layout =
-            Self::get_texture_bind_group_layout(&device, &diffuse_texture);
+        let texture_bind_group_layout = Self::get_texture_bind_group_layout(&device);
 
         let diffuse_bind_group =
             Self::get_texture_bind_group(&device, &diffuse_texture, &texture_bind_group_layout);
@@ -101,7 +102,6 @@ impl State {
         let render_pipeline = Self::get_render_pipeline(
             &device,
             &texture_bind_group_layout,
-            &diffuse_bind_group,
             &shader,
             &surface_config,
         );
@@ -119,6 +119,25 @@ impl State {
         });
         let num_indices = INDICES.len() as u32;
 
+        let camera = camera::Camera {
+            // position the camera 1 unit up and 2 units back
+            // +z is out of the screen
+            eye: (0.0, 1.0, 2.0).into(),
+            // have it look at the origin
+            target: (0.0, 0.0, 0.0).into(),
+            // which way is "up"
+            up: cgmath::Vector3::unit_y(),
+            aspect: surface_config.width as f32 / surface_config.height as f32,
+            fovy: 45.0,
+            znear: 0.1,
+            zfar: 100.0,
+        };
+
+        let mut camera_uniform = camera::CameraUniform::new();
+        camera_uniform.update_view_proj(&camera);
+
+        let camera_buffer = camera_uniform.get_camera_buffer(&device);
+
         Ok(Self {
             surface,
             device,
@@ -133,6 +152,7 @@ impl State {
             demo_state,
             diffuse_bind_group,
             diffuse_texture,
+            camera,
         })
     }
 
@@ -167,10 +187,7 @@ impl State {
         }
     }
 
-    pub fn get_texture_bind_group_layout(
-        device: &wgpu::Device,
-        diffuse_texture: &texture::Texture,
-    ) -> wgpu::BindGroupLayout {
+    pub fn get_texture_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
         return device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
@@ -220,7 +237,6 @@ impl State {
     pub fn get_render_pipeline(
         device: &wgpu::Device,
         texture_bind_group_layout: &wgpu::BindGroupLayout,
-        diffuse_bind_group: &wgpu::BindGroup,
         shader: &wgpu::ShaderModule,
         surface_config: &wgpu::SurfaceConfiguration,
     ) -> wgpu::RenderPipeline {
