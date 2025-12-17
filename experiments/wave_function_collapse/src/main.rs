@@ -132,6 +132,8 @@ impl State {
                 cgmath::Vector3::unit_z(),
                 cgmath::Deg(0.0),
             ),
+            uv_offset: cgmath::Vector2::new(0.0, 0.0),
+            uv_scale: cgmath::Vector2::new(0.0, 0.0),
             texture_index: 0,
         });
 
@@ -346,6 +348,8 @@ impl State {
                 cgmath::Vector3::unit_z(),
                 cgmath::Deg(0.0),
             ),
+            uv_offset: cgmath::Vector2::new(0.0, 0.0),
+            uv_scale: cgmath::Vector2::new(0.0, 0.0),
             texture_index: 1,
         });
 
@@ -362,9 +366,9 @@ impl State {
         let adjacent_step = 0.15;
         let sample_texture_index = 0;
 
-        // for (key, value) in self.wfc_state.sample_cell_adjacency.into_iter() {
-
-        // }
+        for value in self.wfc_state.sample_cell_id_to_info.values() {
+            // instances.push
+        }
     }
 
     pub fn update(&mut self) {

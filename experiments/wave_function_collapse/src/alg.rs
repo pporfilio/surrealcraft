@@ -204,22 +204,34 @@ impl WFCState {
             }
         }
 
-        // We're done with sample_cell_data_to_info here, so I'm okay cloning the CellInfo structs
-        // and only using/modifying the ones in sample_cell_id_to_info beyond this point.
-        for value in sample_cell_data_to_info.values() {
-            self.sample_cell_id_to_info.insert(value.id, value.clone());
+        // into_values consumes the values and means we don't have to do a clone
+        // Also ensures we don't try to use it later.
+        for value in sample_cell_data_to_info.into_values() {
+            self.sample_cell_id_to_info.insert(value.id, value);
         }
 
         let col_count = self.sample_col_count();
         let row_count = self.sample_row_count();
 
+        println!("location map keys");
+        for key in sample_cell_location_to_id.keys() {
+            println!("({}, {})", key.x, key.y);
+        }
+
         // For each CellInfo, for each location that cell appears, for each of the location's neighbors,
         // record the neighbor's id in the adjacencies set.
         for value in self.sample_cell_id_to_info.values_mut() {
+            println!("Cell id {}", value.id);
             for location in value.locations.clone() {
+                println!("Cell location: ({}, {})", location.x, location.y);
+                println!("Adjacencies:");
                 for adjacent_location in
                     WFCState::adjacent_cell_coordinates(location, col_count, row_count)
                 {
+                    println!(
+                        "Adjacent location: ({}, {})",
+                        adjacent_location.x, adjacent_location.y
+                    );
                     value
                         .adjacencies
                         .insert(*sample_cell_location_to_id.get(&adjacent_location).unwrap());
@@ -243,10 +255,10 @@ impl WFCState {
         if y > 0 {
             result.push(cgmath::Vector2::new(x, y - 1));
         }
-        if x < col_count {
+        if x < col_count - 1 {
             result.push(cgmath::Vector2::new(x + 1, y));
         }
-        if y < row_count {
+        if y < row_count - 1 {
             result.push(cgmath::Vector2::new(x, y + 1));
         }
 

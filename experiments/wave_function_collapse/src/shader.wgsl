@@ -31,7 +31,9 @@ struct InstanceInput {
     @location(6) model_matrix_1: vec4<f32>,
     @location(7) model_matrix_2: vec4<f32>,
     @location(8) model_matrix_3: vec4<f32>,
-    @location(9) texture_index: u32,
+    @location(9) uv_offset: vec2<f32>,
+    @location(10) uv_scale: vec2<f32>,
+    @location(11) texture_index: u32,
 };
 
 

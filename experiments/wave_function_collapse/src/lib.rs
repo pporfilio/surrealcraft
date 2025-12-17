@@ -53,6 +53,8 @@ pub struct Instance {
     pub scale: cgmath::Vector2<f32>,
     pub position: cgmath::Vector3<f32>,
     pub rotation: cgmath::Quaternion<f32>,
+    pub uv_offset: cgmath::Vector2<f32>,
+    pub uv_scale: cgmath::Vector2<f32>,
     pub texture_index: u32,
 }
 
@@ -60,6 +62,8 @@ pub struct Instance {
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct InstanceRaw {
     model: [[f32; 4]; 4],
+    uv_offset: [f32; 2],
+    uv_scale: [f32; 2],
     texture_index: u32,
 }
 
@@ -71,6 +75,8 @@ impl Instance {
                 * cgmath::Matrix4::from_translation(self.position)
                 * cgmath::Matrix4::from(self.rotation))
             .into(),
+            uv_offset: self.uv_offset.into(),
+            uv_scale: self.uv_scale.into(),
             texture_index: self.texture_index,
         }
     }
@@ -113,6 +119,16 @@ impl InstanceRaw {
                 wgpu::VertexAttribute {
                     offset: mem::size_of::<[f32; 16]>() as wgpu::BufferAddress,
                     shader_location: 9,
+                    format: wgpu::VertexFormat::Float32x2,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 18]>() as wgpu::BufferAddress,
+                    shader_location: 10,
+                    format: wgpu::VertexFormat::Float32x2,
+                },
+                wgpu::VertexAttribute {
+                    offset: mem::size_of::<[f32; 16]>() as wgpu::BufferAddress,
+                    shader_location: 11,
                     format: wgpu::VertexFormat::Uint32,
                 },
             ],
