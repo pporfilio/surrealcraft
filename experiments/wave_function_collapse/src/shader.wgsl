@@ -68,5 +68,9 @@ var texture_array_sampler: sampler;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return textureSample(texture_array, texture_array_sampler, in.tex_coords, in.texture_index);
+    if (in.texture_index == 0) {
+        return textureSample(t_diffuse, s_diffuse, in.tex_coords);
+    } else {
+        return textureSample(texture_array, texture_array_sampler, in.tex_coords, in.texture_index);
+    }
 }

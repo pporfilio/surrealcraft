@@ -139,6 +139,32 @@ impl Texture {
             bind_group,
         }
     }
+
+    pub fn update(&mut self, queue: &wgpu::Queue, img: image::DynamicImage) {
+        let width = img.width();
+        let height = img.height();
+        let size = wgpu::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        };
+
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                aspect: wgpu::TextureAspect::All,
+                texture: &self.texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+            },
+            &image::DynamicImage::ImageRgba8(img.clone().into()).to_rgba8(),
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * width),
+                rows_per_image: Some(height),
+            },
+            size,
+        )
+    }
 }
 
 pub struct TextureArray {
@@ -283,6 +309,43 @@ impl TextureArray {
             bind_group_layout,
             bind_group,
         }
+    }
+
+    pub fn update_single_index(
+        &mut self,
+        queue: &wgpu::Queue,
+        img: image::DynamicImage,
+        index: u32,
+    ) {
+        // TODO: assert that new image size is not larger than texture size
+        //   and pad if needed.
+
+        let width = img.width();
+        let height = img.height();
+
+        queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                aspect: wgpu::TextureAspect::All,
+                texture: &self.texture,
+                mip_level: 0,
+                origin: wgpu::Origin3d {
+                    x: 0,
+                    y: 0,
+                    z: index, // which texture index to update
+                },
+            },
+            &image::DynamicImage::ImageRgba8(img.clone().into()).to_rgba8(),
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(4 * width),
+                rows_per_image: Some(height),
+            },
+            wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1, // how many layers to update
+            },
+        );
     }
 
     pub fn resize() {

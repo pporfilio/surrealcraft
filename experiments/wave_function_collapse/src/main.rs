@@ -325,28 +325,10 @@ impl State {
 
     fn step_algorithm(&mut self) {
         alg::step_demo_image(&mut self.demo_state);
-        let dimensions = self.demo_state.img.dimensions();
-        let size = wgpu::Extent3d {
-            width: dimensions.0,
-            height: dimensions.1,
-            depth_or_array_layers: 1,
-        };
-
-        self.queue.write_texture(
-            wgpu::TexelCopyTextureInfo {
-                aspect: wgpu::TextureAspect::All,
-                texture: &self.diffuse_texture.texture,
-                mip_level: 0,
-                origin: wgpu::Origin3d::ZERO,
-            },
-            &image::DynamicImage::ImageRgba8(self.demo_state.img.clone()).to_rgba8(),
-            wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(4 * dimensions.0),
-                rows_per_image: Some(dimensions.1),
-            },
-            size,
-        )
+        self.diffuse_texture.update(
+            &self.queue,
+            image::DynamicImage::from(self.demo_state.img.clone()),
+        );
     }
 
     pub fn update(&mut self) {
