@@ -115,7 +115,7 @@ impl State {
         });
         let num_indices = INDICES.len() as u32;
 
-        let camera = camera::OrthoCamera2D::new(-10.0, 10.0, 10.0, -10.0, 1.0);
+        let camera = camera::OrthoCamera2D::new(size.width, size.height, 100, 1.0);
 
         let mut camera_uniform = camera::CameraUniform::new();
         camera_uniform.set_view_proj(camera.build_view_projection_matrix());
@@ -301,6 +301,7 @@ impl State {
             self.surface_config.height = height;
             self.surface.configure(&self.device, &self.surface_config);
             self.is_surface_configured = true;
+            self.camera.resize(width, height);
         }
     }
 

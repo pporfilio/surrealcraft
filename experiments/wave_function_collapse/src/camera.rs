@@ -180,10 +180,13 @@ pub struct OrthoCamera2D {
     pub eye: cgmath::Point3<f32>,
     pub target: cgmath::Point3<f32>,
     pub up: cgmath::Vector3<f32>,
+    pub window_width: u32,
+    pub window_height: u32,
     pub left: f32,
     pub right: f32,
     pub top: f32,
     pub bottom: f32,
+    pub pixels_per_unit: u32,
     pub znear: f32,
     pub zfar: f32,
     pub speed: f32,
@@ -196,8 +199,8 @@ pub struct OrthoCamera2D {
 }
 
 impl OrthoCamera2D {
-    pub fn new(left: f32, right: f32, top: f32, bottom: f32, speed: f32) -> Self {
-        Self {
+    pub fn new(window_width: u32, window_height: u32, pixels_per_unit: u32, speed: f32) -> Self {
+        let mut instance = Self {
             // position the camera 1 unit up and 2 units back
             // +z is out of the screen
             eye: (0.0, 0.0, 2.0).into(),
@@ -205,10 +208,14 @@ impl OrthoCamera2D {
             target: (0.0, 0.0, 0.0).into(),
             // which way is "up"
             up: cgmath::Vector3::unit_y(),
-            left,
-            right,
-            top,
-            bottom,
+            window_width,
+            window_height,
+            // defaults, updated with `resize`
+            left: 0.0,
+            right: 0.0,
+            top: 0.0,
+            bottom: 0.0,
+            pixels_per_unit,
             znear: 0.1,
             zfar: 100.0,
             speed,
@@ -218,7 +225,11 @@ impl OrthoCamera2D {
             is_right_pressed: false,
             is_zoom_in_pressed: false,
             is_zoom_out_pressed: false,
-        }
+        };
+
+        instance.resize(window_width, window_height);
+
+        instance
     }
 
     pub fn build_view_projection_matrix(&self) -> cgmath::Matrix4<f32> {
@@ -298,5 +309,18 @@ impl OrthoCamera2D {
             self.top *= zoom_out_speed;
             self.bottom *= zoom_out_speed;
         }
+    }
+
+    pub fn resize(&mut self, new_width: u32, new_height: u32) {
+        // Adjust camera with new window size to keep objects looking the same size
+        // 100 pixels per unit at default zoom?
+        self.window_width = new_width;
+        self.window_height = new_height;
+        let half_width_units = self.window_width as f32 / 2.0 / self.pixels_per_unit as f32;
+        let half_height_units = self.window_height as f32 / 2.0 / self.pixels_per_unit as f32;
+        self.left = -1.0 * half_width_units;
+        self.right = half_width_units;
+        self.bottom = -1.0 * half_height_units;
+        self.top = half_height_units;
     }
 }
