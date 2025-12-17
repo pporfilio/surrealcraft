@@ -1,6 +1,7 @@
 use cgmath::Vector2;
 use image;
-use image::{ImageError, ImageReader};
+use image::{ImageError, ImageReader, SubImage};
+use std::collections::HashMap;
 
 pub struct DemoState {
     pub img: image::RgbaImage,
@@ -85,12 +86,19 @@ pub fn fill_demo_image(img: &mut image::RgbaImage) {
 pub struct WFCState {
     pub sample_image_rgba: image::RgbaImage,
     pub generated_image_rgba: image::RgbaImage,
+    pub cell_height: u32,
+    pub cell_width: u32,
+    pub output_cells_x: u32,
+    pub output_cells_y: u32,
 }
 
-pub struct SourceCell {
+pub struct SampleCell {
     pub id: u32,
-    pub ul_x: u32,
-    pub ul_y: u32,
+    pub locations: Vec<cgmath::Vector2<u32>>,
+}
+
+pub struct HashTest {
+    pub count: u32,
 }
 
 impl WFCState {
@@ -103,6 +111,15 @@ impl WFCState {
     ) -> Self {
         let sample_image_rgba = sample_image.to_rgba8();
 
+        assert!(
+            sample_image.width() % cell_width == 0,
+            "Sample image width must be divisible by cell_width"
+        );
+        assert!(
+            sample_image.height() % cell_height == 0,
+            "Sample image height must be divisible by cell_height"
+        );
+
         let initial_color = image::Rgba([255, 255, 255, 255]);
         let generated_image_rgba = image::RgbaImage::from_pixel(
             output_cells_x * cell_width,
@@ -113,7 +130,58 @@ impl WFCState {
         Self {
             sample_image_rgba,
             generated_image_rgba,
+            cell_height,
+            cell_width,
+            output_cells_x,
+            output_cells_y,
         }
+    }
+
+    pub fn initialize_adjacency(&self) {
+        let sample_cols = self.sample_image_rgba.width() / self.cell_width;
+        let sample_rows = self.sample_image_rgba.height() / self.cell_height;
+
+        let mut cell_map = HashMap::new();
+
+        let current_cell_id = 0;
+
+        // Since cells can be duplicated, figuring out which cells
+        // are the same ahead of time will make it faster to build
+        // the adjacency list.
+        for x_step in 0..sample_cols {
+            for y_step in 0..sample_rows {
+                // crop_immutable returns a SubImage that can be converted to an image with `to_image`
+                // Constructing with SubImage::new returned something that didn't match the trait bounds of to_image.
+                let cell_subimage = image::imageops::crop_imm(
+                    &self.sample_image_rgba,
+                    x_step * self.cell_width,
+                    y_step * self.cell_height,
+                    self.cell_width,
+                    self.cell_height,
+                );
+                let cell_image: image::RgbaImage = cell_subimage.to_image();
+                let key: Vec<u8> = cell_image.into_raw();
+                let cell_entry = cell_map.entry(key).or_insert(SampleCell {
+                    id: current_cell_id,
+                    locations: Vec::new(),
+                });
+
+                // If cell_entry was a primitive, for example if it was a u32 that we wanted to increment,
+                // This would be done as *cell_entry += 1. I guess it returns a reference to primitives but not
+                // to structs, or the `.` operator automatically knows if it needs to dereference something?
+                cell_entry
+                    .locations
+                    .push(cgmath::Vector2::new(x_step, y_step));
+
+                current_cell_id += 1;
+            }
+        }
+
+        // make a map between cell contents and id
+
+        // make a 2d array with each cell's content's id
+
+        // build adjacency list from this array
     }
 
     pub fn next(&mut self) -> &image::RgbaImage {

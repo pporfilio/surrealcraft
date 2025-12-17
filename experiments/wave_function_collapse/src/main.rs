@@ -95,6 +95,8 @@ impl State {
 
         let mut wfc_state = alg::WFCState::new(diffuse_image, 5, 5, 10, 10);
 
+        wfc_state.initialize_adjacency();
+
         // The compilier suggested this clone (acknowledging the performance impact).
         // The issue seemed to be that ImageRgba8 moves the value but then we tried
         // to use diffuse_rgba later to return it as part of the State struct which
