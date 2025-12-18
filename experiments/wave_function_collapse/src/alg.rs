@@ -281,6 +281,19 @@ impl WFCState {
         if y < row_count - 1 {
             result.push(cgmath::Vector2::new(x, y + 1));
         }
+        // Also consider diagonals
+        if x > 0 && y > 0 {
+            result.push(cgmath::Vector2::new(x - 1, y - 1));
+        }
+        if x > 0 && y < row_count - 1 {
+            result.push(cgmath::Vector2::new(x - 1, y + 1));
+        }
+        if x < col_count - 1 && y > 0 {
+            result.push(cgmath::Vector2::new(x + 1, y - 1));
+        }
+        if x < col_count - 1 && y < row_count - 1 {
+            result.push(cgmath::Vector2::new(x + 1, y + 1));
+        }
 
         return result;
     }

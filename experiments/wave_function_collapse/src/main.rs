@@ -94,10 +94,10 @@ impl State {
         let diffuse_rgba = image::RgbaImage::from_pixel(imgx, imgy, initial_color);
         let demo_state = alg::DemoState::new(diffuse_rgba, 100);
 
-        let bytes = include_bytes!("../images/color_gradient.png");
+        let bytes = include_bytes!("../images/terrain_2.png");
         let diffuse_image = image::load_from_memory(bytes).unwrap();
 
-        let mut wfc_state = alg::WFCState::new(diffuse_image, 5, 5, 10, 10);
+        let mut wfc_state = alg::WFCState::new(diffuse_image, 10, 10, 20, 20);
 
         wfc_state.initialize_adjacency();
 
